@@ -13,12 +13,13 @@ function send(type, data) {
 // =============================================================================
 // REFERENCES HTML
 // =============================================================================
-const screenJoin = document.getElementById("screen-join"); 
-const screenController = document.getElementById("screen-controller"); 
-const pseudoInput = document.getElementById("pseudo"); 
+const screenJoin = document.getElementById("screen-join");
+const screenController = document.getElementById("screen-controller");
+const screenSelect = document.getElementById("screen-select");
+const pseudoInput = document.getElementById("pseudo");
 
 // Référence au bouton image (div) de connexion
-const btnJoinGraphical = document.getElementById("btn-join"); 
+const btnJoinGraphical = document.getElementById("btn-join");
 
 // Phase de chargement initiale
 btnJoinGraphical.classList.add("loading"); // On grise le bouton graphiquement
@@ -38,10 +39,10 @@ ws.addEventListener("close", () => {
 });
 
 // HUD PARCHEMINS
-const playerPseudo = document.getElementById("player-pseudo"); 
-const playerTeam = document.getElementById("player-team"); 
-const ctrlOpponentDeathsScore = document.getElementById("ctrl-opponent-deaths-score"); 
-const ctrlTimer = document.getElementById("ctrl-timer"); 
+const playerPseudo = document.getElementById("player-pseudo");
+const playerTeam = document.getElementById("player-team");
+const ctrlOpponentDeathsScore = document.getElementById("ctrl-opponent-deaths-score");
+const ctrlTimer = document.getElementById("ctrl-timer");
 
 // K.O. et Abordage
 const screenInactive = document.getElementById("screen-inactive");
@@ -49,11 +50,13 @@ const inactiveCountdown = document.getElementById("inactive-countdown");
 const abordageNotif = document.getElementById("abordage-notif");
 
 // Bouton Dash (Petit Crâne)
-const btnDashSkull = document.getElementById("btn-dash"); 
-const btnDashCooldownText = document.getElementById("btn-dash-cooldown-text"); 
+const btnDashSkull = document.getElementById("btn-dash");
+const btnDashCooldownText = document.getElementById("btn-dash-cooldown-text");
 const btnTaperPoing = document.getElementById("btn-taper");
 
 let myId = null;
+let myTeam = null;
+let myPseudo = null;
 
 // =============================================================================
 // REJOINDRE LA PARTIE
@@ -74,10 +77,10 @@ btnJoinGraphical.addEventListener("click", () => {
 });
 
 function formatTime(ms) {
-  const totalSec = Math.max(0, Math.ceil(ms / 1000)); 
-  const min = Math.floor(totalSec / 60); 
-  const sec = totalSec % 60; 
-  return `${min}:${String(sec).padStart(2, "0")}`; 
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}:${String(sec).padStart(2, "0")}`;
 }
 
 // =============================================================================
@@ -86,15 +89,87 @@ function formatTime(ms) {
 ws.addEventListener("message", (event) => {
   const { type, data } = JSON.parse(event.data);
 
+  // Étape 1 : Le serveur nous a attribué une team → Afficher sélection de skin
+  if (type === "teamAssigned") {
+    screenJoin.classList.add("hidden");
+    screenSelect.classList.remove("hidden");
+
+    myId = data.id;
+    myTeam = data.team;
+    myPseudo = data.pseudo;
+
+    // Mettre à jour le badge de team
+    const badge = document.getElementById("select-team-badge");
+    badge.textContent = "TEAM " + data.team.toUpperCase();
+    badge.className = "select-team-badge " + data.team;
+
+    // Construire la grille de personnages
+    const grid = document.getElementById("select-grid");
+    grid.innerHTML = "";
+
+    const teamFolder = data.team === "pirate" ? "team1" : "team2";
+    const takenSet = new Set(data.takenSkins || []);
+
+    data.skins.forEach((skinId, index) => {
+      const card = document.createElement("div");
+      card.className = "skin-card";
+      card.dataset.skinId = skinId;
+      card.style.animationDelay = (index * 0.06) + "s";
+
+      if (takenSet.has(skinId)) {
+        card.classList.add("taken");
+      }
+
+      const img = document.createElement("img");
+      img.className = "skin-card-img";
+      img.src = `/game-assets/${teamFolder}/${skinId}-Stat.png`;
+      img.alt = skinId;
+      img.draggable = false;
+
+      card.appendChild(img);
+
+      // Clic pour sélectionner
+      card.addEventListener("click", () => {
+        if (card.classList.contains("taken")) return;
+
+        // Envoyer la sélection au serveur
+        send("selectSkin", { skinId: skinId });
+
+        // Visual feedback immédiat
+        grid.querySelectorAll(".skin-card").forEach(c => c.classList.remove("selected"));
+        card.classList.add("selected");
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // Mise à jour en temps réel des skins pris
+  if (type === "skinTaken") {
+    const grid = document.getElementById("select-grid");
+    const takenSet = new Set(data.takenSkins || []);
+
+    grid.querySelectorAll(".skin-card").forEach(card => {
+      const skinId = card.dataset.skinId;
+      if (takenSet.has(skinId) && !card.classList.contains("selected")) {
+        card.classList.add("taken");
+      } else if (!takenSet.has(skinId)) {
+        card.classList.remove("taken");
+      }
+    });
+  }
+
+  // Étape 2 : Le serveur a validé notre skin → Aller à la manette
   if (type === "joined") {
-    screenJoin.classList.add("hidden"); 
-    screenController.classList.remove("hidden"); 
+    screenSelect.classList.add("hidden");
+    screenJoin.classList.add("hidden");
+    screenController.classList.remove("hidden");
 
     myId = data.id;
     playerPseudo.textContent = data.pseudo;
     // TEAM PIRATE / TEAM MONSTRE
     playerTeam.textContent = "TEAM " + data.team.toUpperCase();
-    playerTeam.className = "badge " + data.team; 
+    playerTeam.className = "badge " + data.team;
   }
 
   if (type === "state") {
@@ -124,8 +199,8 @@ ws.addEventListener("message", (event) => {
 const joystickBase = document.getElementById("joystick-base");
 const joystickKnob = document.getElementById("joystick-knob");
 
-const MAX_KNOB_DIST = 45; 
-const DEAD_ZONE = 10;     
+const MAX_KNOB_DIST = 45;
+const DEAD_ZONE = 10;
 
 let joystickInterval = null;
 let currentDirX = 0;
@@ -147,8 +222,8 @@ function updateJoystick(clientX, clientY) {
   joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
 
   if (dist > DEAD_ZONE) {
-    currentDirX = dx / MAX_KNOB_DIST; 
-    currentDirY = dy / MAX_KNOB_DIST; 
+    currentDirX = dx / MAX_KNOB_DIST;
+    currentDirY = dy / MAX_KNOB_DIST;
   } else {
     currentDirX = 0;
     currentDirY = 0;
@@ -176,13 +251,13 @@ function startJoystick(clientX, clientY) {
 
 joystickBase.addEventListener("touchstart", (e) => { e.preventDefault(); startJoystick(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
 joystickBase.addEventListener("touchmove", (e) => { e.preventDefault(); updateJoystick(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-joystickBase.addEventListener("touchend",   (e) => { e.preventDefault(); resetJoystick(); }, { passive: false });
-joystickBase.addEventListener("touchcancel",(e) => { e.preventDefault(); resetJoystick(); }, { passive: false });
+joystickBase.addEventListener("touchend", (e) => { e.preventDefault(); resetJoystick(); }, { passive: false });
+joystickBase.addEventListener("touchcancel", (e) => { e.preventDefault(); resetJoystick(); }, { passive: false });
 
 joystickBase.addEventListener("mousedown", (e) => {
   startJoystick(e.clientX, e.clientY);
   const onMove = (e) => updateJoystick(e.clientX, e.clientY);
-  const onUp   = () => {
+  const onUp = () => {
     resetJoystick();
     document.removeEventListener("mousemove", onMove);
     document.removeEventListener("mouseup", onUp);
@@ -196,10 +271,10 @@ joystickBase.addEventListener("mousedown", (e) => {
 // ==========================================================
 if (btnDashSkull) {
   function fireDash(e) {
-    e.preventDefault(); 
+    e.preventDefault();
     if (btnDashSkull.disabled) return;
 
-    send("dash", null); 
+    send("dash", null);
 
     btnDashSkull.disabled = true; // Griser le crâne
     let secondsLeft = 10;
@@ -213,9 +288,9 @@ if (btnDashSkull) {
       } else {
         clearInterval(cooldownInterval);
         btnDashSkull.disabled = false;
-        btnDashCooldownText.classList.add("hidden"); 
+        btnDashCooldownText.classList.add("hidden");
       }
-    }, 1000); 
+    }, 1000);
   }
 
   btnDashSkull.addEventListener("touchstart", fireDash, { passive: false });
@@ -226,11 +301,11 @@ if (btnDashSkull) {
 // ==========================================================
 if (btnTaperPoing) {
   function fireTaper(e) {
-    e.preventDefault(); 
+    e.preventDefault();
     if (btnTaperPoing.disabled) return;
 
     // On envoie l'ordre d'attaquer au serveur
-    send("taper", null); 
+    send("taper", null);
 
     // Animation de clic sur le bouton
     btnTaperPoing.style.transform = "scale(0.85)";
@@ -239,13 +314,13 @@ if (btnTaperPoing) {
     // On bloque le bouton pendant le cooldown (1.5s)
     btnTaperPoing.disabled = true;
     btnTaperPoing.style.filter = "grayscale(100%) brightness(50%)"; // On le grise
-    
+
     setTimeout(() => {
       btnTaperPoing.disabled = false;
       btnTaperPoing.style.filter = "none"; // On lui rend ses couleurs
     }, 1500);
   }
-  
+
   btnTaperPoing.addEventListener("touchstart", fireTaper, { passive: false });
   btnTaperPoing.addEventListener("mousedown", fireTaper);
 }

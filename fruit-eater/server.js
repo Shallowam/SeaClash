@@ -16,6 +16,8 @@ const PORT = 3000;
 
 app.use("/controller", express.static(path.join(__dirname, "controller")));
 app.use("/game", express.static(path.join(__dirname, "game")));
+// Servir les assets du jeu pour que le controller puisse afficher les sprites
+app.use("/game-assets", express.static(path.join(__dirname, "game", "Assets")));
 
 app.get("/", (req, res) => {
   res.redirect("/controller");
@@ -25,11 +27,11 @@ app.get("/", (req, res) => {
 // CONFIGURATION DU JEU
 // =============================================================================
 
-const ARENA = { width: 1200, height: 675 }; 
+const ARENA = { width: 1200, height: 675 };
 const ADVANCED_ZONES = {
   pirate: [
     { x1: 310, y1: 150, x2: 500, y2: 205 },
-    { x1: 76,  y1: 205, x2: 500, y2: 500 },
+    { x1: 76, y1: 205, x2: 500, y2: 500 },
     { x1: 360, y1: 440, x2: 550, y2: 580 },
     { x1: 385, y1: 580, x2: 550, y2: 605 },
     { x1: 220, y1: 420, x2: 530, y2: 540 },
@@ -84,17 +86,17 @@ function isPosValid(x, y, player) {
 
 const SKINS = {
   pirate: ["Perso1", "Perso2", "Perso3", "Perso4", "Perso5", "Perso6", "Perso7", "Perso8", "Perso9", "Perso10"],
-  monstre: ["M1", "M3", "M4"]
+  monstre: ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10"]
 };
 
-const SPEED = 18; 
-const GAME_DURATION = 10 * 60 * 1000; 
-const RESTART_DELAY = 30 * 1000; 
-const MAX_GEMS = 8; 
-const PICKUP_DISTANCE = 80; 
+const SPEED = 18;
+const GAME_DURATION = 10 * 60 * 1000;
+const RESTART_DELAY = 30 * 1000;
+const MAX_GEMS = 5;
+const PICKUP_DISTANCE = 80;
 
 const TRAP_COUNT = 1; // 1 sable mouvant par zone
-const TRAP_RADIUS = 50;            
+const TRAP_RADIUS = 50;
 const INACTIVE_DURATION = 2 * 1000; // 2 secondes
 const RED_TRAP_ACTIVE_DURATION = 15 * 1000; // 15 secondes visibles
 const RED_TRAP_HIDDEN_DURATION = 5 * 1000;  // 5 secondes cachées (plus aucune zone)
@@ -104,38 +106,40 @@ const ABORDAGE_WINDOWS = [
   { start: 5 * 60 * 1000, end: 5 * 60 * 1000 + 45 * 1000 },
   { start: 8 * 60 * 1000, end: 8 * 60 * 1000 + 45 * 1000 },
 ];
-const PUSH_DISTANCE            = 80;          
-const APPLE_TELEPORT_DURATION  = 15 * 1000;   
-const LINE_TRAP_DURATION       = 3 * 1000;    
-const LINE_TRAP_TOLERANCE      = 40;          
+const PUSH_DISTANCE = 80;
+const APPLE_TELEPORT_DURATION = 15 * 1000;
+const LINE_TRAP_DURATION = 3 * 1000;
+const LINE_TRAP_TOLERANCE = 40;
 const PASSERELLES = [
-  { y: 240, height: 120 }, 
-  { y: 440, height: 120 }, 
+  { y: 240, height: 120 },
+  { y: 440, height: 120 },
 ];
 
 // =============================================================================
 // ETAT DU JEU
 // =============================================================================
 
-let players = {}; 
-let fruits = {}; 
-let traps = {};  
+let players = {};
+let pendingPlayers = {}; // Joueurs en cours de sélection de skin (pas encore en jeu)
+let takenSkins = { pirate: new Set(), monstre: new Set() }; // Skins pris par team
+let fruits = {};
+let traps = {};
 let launchedBombs = {};
 // LES TEAMS SONT MAINTENANT PIRATE ET MONSTRE
-let scores = { pirate: 0, monstre: 0 }; 
-let deaths = { pirate: 0, monstre: 0 }; 
+let scores = { pirate: 0, monstre: 0 };
+let deaths = { pirate: 0, monstre: 0 };
 
 let gamePhase = "waiting";
 
-let gameEndTime = 0; 
-let restartTime = 0; 
-let nextId = 1; 
-let nextFruitId = 1; 
-let gameInterval = null; 
+let gameEndTime = 0;
+let restartTime = 0;
+let nextId = 1;
+let nextFruitId = 1;
+let gameInterval = null;
 let countdownInterval = null;
-let restartTimeout = null; 
-let abordageActive = false;  
-let abordageTimeLeft = 0;    
+let restartTimeout = null;
+let abordageActive = false;
+let abordageTimeLeft = 0;
 let redTrapsActive = false;
 let nextRedTrapChange = 0;
 let currentCountdown = 0;
@@ -161,7 +165,8 @@ function buildStateMsg() {
       arena: ARENA,
       phase: gamePhase,
       timeLeft: gamePhase === "playing" ? Math.max(0, gameEndTime - Date.now()) : 0,
-      countdown: currentCountdown
+      countdown: currentCountdown,
+      playerCount: Object.keys(players).length
     }
   });
 }
@@ -191,7 +196,7 @@ function spawnFruit() {
     : GEM_COLORS;
 
   const color = availableColors[Math.floor(Math.random() * availableColors.length)];
-  
+
   const side = Math.random() < 0.5 ? "pirate" : "monstre";
   const { x, y } = getRandomPositionInZone(side);
 
@@ -201,8 +206,8 @@ function spawnFruit() {
     color: color,
     x: x,
     y: y,
-    activeAt: now + 2000,        
-    expiresAt: now + 12000       
+    activeAt: now + 2000,
+    expiresAt: now + 12000
   };
   return id;
 }
@@ -218,24 +223,24 @@ function checkPickup(player) {
   for (const [id, fruit] of Object.entries(fruits)) {
     if (fruit.activeAt && Date.now() < fruit.activeAt) continue;
 
-    const dx = player.x - fruit.x; 
-    const dy = player.y - fruit.y; 
-    const distance = Math.sqrt(dx * dx + dy * dy); 
+    const dx = player.x - fruit.x;
+    const dy = player.y - fruit.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
     if (distance < PICKUP_DISTANCE) {
       const { color, y: fruitY } = fruit;
-      delete fruits[id]; 
+      delete fruits[id];
 
       setTimeout(() => {
         if (gamePhase === "playing" && !abordageActive) fillFruits();
       }, 3000);
-      
+
       const opponentTeam = player.team === "pirate" ? "monstre" : "pirate";
 
-     if (color === "corde") {
+      if (color === "corde") {
         // On vérifie si le joueur est actuellement dans son camp
-        const isHome = (player.team === "pirate" && player.x < ARENA.width / 2) || 
-                       (player.team === "monstre" && player.x >= ARENA.width / 2);
+        const isHome = (player.team === "pirate" && player.x < ARENA.width / 2) ||
+          (player.team === "monstre" && player.x >= ARENA.width / 2);
 
         if (isHome) {
           // 1. IL EST CHEZ LUI : On l'envoie à l'abordage chez l'ennemi !
@@ -243,7 +248,7 @@ function checkPickup(player) {
           const destPos = getRandomPositionInZone(destTeam);
           player.x = destPos.x;
           player.y = destPos.y;
-          
+
           player.appleReturn = Date.now() + APPLE_TELEPORT_DURATION; // On lance le chrono de retour automatique (15s)
           console.log(`🪢 ${player.pseudo} a pris une Corde -> TÉLÉPORTÉ CHEZ L'ENNEMI !`);
         } else {
@@ -251,7 +256,7 @@ function checkPickup(player) {
           const homePos = getRandomPositionInZone(player.team);
           player.x = homePos.x;
           player.y = homePos.y;
-          
+
           delete player.appleReturn; // On annule le chrono puisqu'il est rentré tout seul !
           console.log(`🪢 ${player.pseudo} a pris une Corde -> RETOUR À LA BASE !`);
         }
@@ -260,7 +265,7 @@ function checkPickup(player) {
         const sharkId = "shark_" + Date.now();
         const startX = player.team === "pirate" ? -300 : ARENA.width + 300;
         const endX = player.team === "pirate" ? ARENA.width + 300 : -300;
-        
+
         traps[sharkId] = {
           id: sharkId,
           type: "shark",
@@ -275,7 +280,7 @@ function checkPickup(player) {
         };
         scores[player.team]++;
         console.log(`${player.pseudo} a invoqué un Requin Géant !`);
-      } 
+      }
       else {
         const potentialTargets = Object.values(players).filter(p => p.team === opponentTeam);
         if (potentialTargets.length > 0) {
@@ -287,7 +292,7 @@ function checkPickup(player) {
           launchedBombs[bombId] = {
             id: bombId, startX: fruit.x, startY: fruitY, targetX: targetX, targetY: targetY, state: "traveling"
           };
-          broadcastState(); 
+          broadcastState();
 
           setTimeout(() => {
             if (launchedBombs[bombId]) {
@@ -301,7 +306,7 @@ function checkPickup(player) {
               launchedBombs[bombId].state = "exploded";
               const EXPLOSION_RADIUS = 100;
               Object.values(players).forEach(p => {
-                const dx = p.x - targetX; 
+                const dx = p.x - targetX;
                 const dy = p.y - targetY;
                 if (Math.sqrt(dx * dx + dy * dy) < EXPLOSION_RADIUS) {
                   p.inactiveUntil = Date.now() + INACTIVE_DURATION;
@@ -323,7 +328,7 @@ function checkPickup(player) {
       return true;
     }
   }
-  return false; 
+  return false;
 }
 
 // =============================================================================
@@ -332,23 +337,23 @@ function checkPickup(player) {
 
 function respawnRedTrapsForSide(side) {
   for (let i = 0; i < TRAP_COUNT; i++) {
-    const id = "s" + side + i; 
-    
+    const id = "s" + side + i;
+
     const now = Date.now();
     const { x, y } = getRandomPositionInZone(side);
-    
+
     traps[id] = {
       id,
       type: "sable",
-      sprite: side,  
+      sprite: side,
       x: x,
       y: y,
       radius: TRAP_RADIUS,
       inactiveDuration: INACTIVE_DURATION,
-      
+
       // GESTION DU TEMPS (Clignotements)
       // Il devient mortel 1.5s après sa création (pendant l'avertissement)
-      activeAt: now + 1500, 
+      activeAt: now + 1500,
       // Il disparaît 10s après être devenu actif (durée totale 11.5s)
       expireAt: now + 11500
     };
@@ -373,14 +378,15 @@ function checkTrap(player) {
       return Math.sqrt(dx * dx + (dy * 2) * (dy * 2)) < t.radius;
     });
     if (inRedTrap) return;
-    delete player.respawnProtected; 
+    delete player.respawnProtected;
   }
 
   if (player.inactiveUntil && Date.now() < player.inactiveUntil) return;
+  if (player.invincibleUntil && Date.now() < player.invincibleUntil) return;
   for (const trap of Object.values(traps)) {
     if (trap.activeAt && Date.now() < trap.activeAt) continue;
-    if (trap.activeAt && Date.now() < trap.activeAt) continue; 
-    if (trap.deactivateAt && Date.now() >= trap.deactivateAt) continue; 
+    if (trap.activeAt && Date.now() < trap.activeAt) continue;
+    if (trap.deactivateAt && Date.now() >= trap.deactivateAt) continue;
 
     let hit = false;
     if (trap.type === "line") {
@@ -390,9 +396,9 @@ function checkTrap(player) {
         const elapsed = Date.now() - trap.startTime;
         const progress = Math.min(1, elapsed / trap.duration);
         const currentX = trap.startX + (trap.endX - trap.startX) * progress;
-        // Hitbox rectangulaire : 500x300 centrée sur currentX, trap.y
-        if (Math.abs(player.x - currentX) < 250 && Math.abs(player.y - trap.y) < 150) {
-            hit = true;
+        // Hitbox rectangulaire réduite (le sprite fait 320x190)
+        if (Math.abs(player.x - currentX) < 130 && Math.abs(player.y - trap.y) < 75) {
+          hit = true;
         }
       }
     } else {
@@ -419,7 +425,7 @@ function checkTrap(player) {
         safeY = player.y + (Math.random() * SCATTER * 2 - SCATTER);
         safeX = Math.floor(safeX);
         safeY = Math.floor(safeY);
-        
+
         onTrap = Object.values(traps).some(t => {
           if (t.type === "line") return Math.abs(safeY - t.y) < t.tolerance;
           if (t.type === "shark") return Math.abs(safeY - t.y) < 75;
@@ -461,8 +467,8 @@ function startGame() {
   fruits = {};
   fillFruits();
   traps = {};
-  launchedBombs = {}; 
-  spawnTraps(); 
+  launchedBombs = {};
+  spawnTraps();
   redTrapsActive = true;
 
   for (const player of Object.values(players)) {
@@ -478,7 +484,7 @@ function startGame() {
   gamePhase = "countdown";
   currentCountdown = 3;
   console.log("--- Compte à Rebours ---");
-  broadcastState(); 
+  broadcastState();
 
   if (countdownInterval) clearInterval(countdownInterval);
   countdownInterval = setInterval(() => {
@@ -488,95 +494,95 @@ function startGame() {
     } else {
       clearInterval(countdownInterval);
       countdownInterval = null;
-      
+
       // Lancement réel de la partie
       gamePhase = "playing";
-      gameEndTime = Date.now() + GAME_DURATION; 
+      gameEndTime = Date.now() + GAME_DURATION;
       nextRedTrapChange = Date.now() + RED_TRAP_ACTIVE_DURATION;
       console.log("--- Partie lancee ! ---");
       broadcastState();
 
       gameInterval = setInterval(() => {
-    if (Date.now() >= gameEndTime) {
-      endGame();
-    } else {
-      const elapsed = GAME_DURATION - Math.max(0, gameEndTime - Date.now());
-      const activeWindow = ABORDAGE_WINDOWS.find(w => elapsed >= w.start && elapsed < w.end);
-      const wasAbordage = abordageActive;
-      abordageActive = !!activeWindow;
-      abordageTimeLeft = activeWindow ? Math.ceil((activeWindow.end - elapsed) / 1000) : 0;
+        if (Date.now() >= gameEndTime) {
+          endGame();
+        } else {
+          const elapsed = GAME_DURATION - Math.max(0, gameEndTime - Date.now());
+          const activeWindow = ABORDAGE_WINDOWS.find(w => elapsed >= w.start && elapsed < w.end);
+          const wasAbordage = abordageActive;
+          abordageActive = !!activeWindow;
+          abordageTimeLeft = activeWindow ? Math.ceil((activeWindow.end - elapsed) / 1000) : 0;
 
-      if (!wasAbordage && abordageActive) {
-        fruits = {};
-      }
-
-      if (wasAbordage && !abordageActive) {
-        for (const player of Object.values(players)) {
-          if (!isInZone(player.x, player.y, player.team)) {
-            const pos = getRandomPositionInZone(player.team);
-            player.x = pos.x;
-            player.y = pos.y;
+          if (!wasAbordage && abordageActive) {
+            fruits = {};
           }
-        }
-        fillFruits();
-      }
-      
-      for (const [id, trap] of Object.entries(traps)) {
-        if ((trap.type === "line" || trap.type === "shark") && Date.now() >= trap.deactivateAt) delete traps[id];
-      }
-      // =======================================================
-      // NOUVEAU : NETTOYAGE DES OBJETS PÉRIMÉS (10 secondes)
-      // =======================================================
-      let needsNewFruits = false;
-      for (const [id, fruit] of Object.entries(fruits)) {
-        if (fruit.expiresAt && Date.now() >= fruit.expiresAt) {
-          delete fruits[id]; // On supprime l'objet
-          needsNewFruits = true;
-        }
-      }
-      // On remplace les objets disparus (sauf si on est en phase d'abordage)
-      if (needsNewFruits && !abordageActive) {
-        fillFruits();
-      }
-      // =======================================================
-      // NOUVEAU : CYCLE DES ZONES ROUGES (Apparition / Disparition)
-      // =======================================================
-      if (Date.now() >= nextRedTrapChange) {
-        if (redTrapsActive) {
-          // 1. Il est temps de les cacher !
-          // On supprime uniquement les pièges "rouge" (pour ne pas effacer les lasers)
-          for (const id in traps) {
-            if (traps[id].type === "rouge") {
-              delete traps[id];
+
+          if (wasAbordage && !abordageActive) {
+            for (const player of Object.values(players)) {
+              if (!isInZone(player.x, player.y, player.team)) {
+                const pos = getRandomPositionInZone(player.team);
+                player.x = pos.x;
+                player.y = pos.y;
+              }
+            }
+            fillFruits();
+          }
+
+          for (const [id, trap] of Object.entries(traps)) {
+            if ((trap.type === "line" || trap.type === "shark") && Date.now() >= trap.deactivateAt) delete traps[id];
+          }
+          // =======================================================
+          // NOUVEAU : NETTOYAGE DES OBJETS PÉRIMÉS (10 secondes)
+          // =======================================================
+          let needsNewFruits = false;
+          for (const [id, fruit] of Object.entries(fruits)) {
+            if (fruit.expiresAt && Date.now() >= fruit.expiresAt) {
+              delete fruits[id]; // On supprime l'objet
+              needsNewFruits = true;
             }
           }
-          redTrapsActive = false;
-          nextRedTrapChange = Date.now() + RED_TRAP_HIDDEN_DURATION;
-          console.log("Les zones rouges disparaissent !");
-        } else {
-          // 2. Il est temps de les faire réapparaître à un NOUVEL endroit !
-          spawnTraps();
-          redTrapsActive = true;
-          nextRedTrapChange = Date.now() + RED_TRAP_ACTIVE_DURATION;
-          console.log("Nouvelles zones rouges !");
+          // On remplace les objets disparus (sauf si on est en phase d'abordage)
+          if (needsNewFruits && !abordageActive) {
+            fillFruits();
+          }
+          // =======================================================
+          // NOUVEAU : CYCLE DES ZONES ROUGES (Apparition / Disparition)
+          // =======================================================
+          if (Date.now() >= nextRedTrapChange) {
+            if (redTrapsActive) {
+              // 1. Il est temps de les cacher !
+              // On supprime uniquement les pièges "rouge" (pour ne pas effacer les lasers)
+              for (const id in traps) {
+                if (traps[id].type === "rouge") {
+                  delete traps[id];
+                }
+              }
+              redTrapsActive = false;
+              nextRedTrapChange = Date.now() + RED_TRAP_HIDDEN_DURATION;
+              console.log("Les zones rouges disparaissent !");
+            } else {
+              // 2. Il est temps de les faire réapparaître à un NOUVEL endroit !
+              spawnTraps();
+              redTrapsActive = true;
+              nextRedTrapChange = Date.now() + RED_TRAP_ACTIVE_DURATION;
+              console.log("Nouvelles zones rouges !");
+            }
+          }
+          // =======================================================
+          // =======================================================
+          for (const player of Object.values(players)) {
+            if (player.appleReturn && Date.now() >= player.appleReturn) {
+              delete player.appleReturn;
+              const pos = getRandomPositionInZone(player.team);
+              player.x = pos.x;
+              player.y = pos.y;
+            }
+          }
+          for (const player of Object.values(players)) {
+            checkTrap(player);
+          }
+          broadcastState();
         }
-      }
-      // =======================================================
-      // =======================================================
-      for (const player of Object.values(players)) {
-        if (player.appleReturn && Date.now() >= player.appleReturn) {
-          delete player.appleReturn;
-          const pos = getRandomPositionInZone(player.team);
-          player.x = pos.x;
-          player.y = pos.y;
-        }
-      }
-      for (const player of Object.values(players)) {
-        checkTrap(player);
-      }
-      broadcastState();
-    }
-  }, 1000);
+      }, 1000);
     }
   }, 1000);
 }
@@ -624,24 +630,81 @@ wss.on("connection", (ws) => {
     const { type, data } = msg;
 
     if (type === "join") {
-      const countPirate = Object.values(players).filter(p => p.team === "pirate").length;
-      const countMonstre  = Object.values(players).filter(p => p.team === "monstre").length;
+      // Étape 1 : Attribuer une team et proposer les skins
+      const countPirate = Object.values(players).filter(p => p.team === "pirate").length
+        + Object.values(pendingPlayers).filter(p => p.team === "pirate").length;
+      const countMonstre = Object.values(players).filter(p => p.team === "monstre").length
+        + Object.values(pendingPlayers).filter(p => p.team === "monstre").length;
       const assignedTeam = countPirate <= countMonstre ? "pirate" : "monstre";
-      const skinId = SKINS[assignedTeam][Math.floor(Math.random() * SKINS[assignedTeam].length)];
-      const pos = getRandomPositionInZone(assignedTeam);
 
+      // Stocker le joueur en attente de sélection de skin
+      pendingPlayers[id] = {
+        id,
+        pseudo: data.pseudo || "Anonyme",
+        team: assignedTeam
+      };
+
+      // Envoyer la team et les skins disponibles
+      const allSkins = SKINS[assignedTeam];
+      const taken = Array.from(takenSkins[assignedTeam]);
+      send(ws, "teamAssigned", {
+        id,
+        team: assignedTeam,
+        pseudo: data.pseudo || "Anonyme",
+        skins: allSkins,
+        takenSkins: taken
+      });
+      console.log(`${data.pseudo || "Anonyme"} → Team ${assignedTeam} (choix du skin en cours)`);
+    }
+
+    if (type === "selectSkin") {
+      // Étape 2 : Le joueur a choisi son skin
+      const pending = pendingPlayers[id];
+      if (!pending) return;
+
+      const chosenSkin = data.skinId;
+      const team = pending.team;
+
+      // Vérifier que le skin est valide et pas déjà pris
+      if (!SKINS[team].includes(chosenSkin) || takenSkins[team].has(chosenSkin)) {
+        // Le skin n'est plus dispo, renvoyer la liste mise à jour
+        send(ws, "skinTaken", {
+          takenSkins: Array.from(takenSkins[team])
+        });
+        return;
+      }
+
+      // Marquer le skin comme pris
+      takenSkins[team].add(chosenSkin);
+
+      const pos = getRandomPositionInZone(team);
       players[id] = {
-        id, pseudo: data.pseudo || "Anonyme", team: assignedTeam, skinId: skinId,
+        id,
+        pseudo: pending.pseudo,
+        team: team,
+        skinId: chosenSkin,
         x: pos.x,
         y: pos.y,
         hitCount: 0,
         invincibleUntil: 0
       };
 
-      console.log(`${players[id].pseudo} (${players[id].team}) a rejoint la partie`);
+      delete pendingPlayers[id];
+
+      console.log(`${players[id].pseudo} (${players[id].team}) a choisi ${chosenSkin} et rejoint la partie`);
       send(ws, "joined", players[id]);
 
-      if (gamePhase === "waiting" && Object.keys(players).length >= 1) {
+      // Notifier les autres joueurs en sélection que ce skin est pris
+      wss.clients.forEach(client => {
+        if (client.readyState === client.OPEN && client._playerId !== id && pendingPlayers[client._playerId]) {
+          const pendingTeam = pendingPlayers[client._playerId].team;
+          if (pendingTeam === team) {
+            send(client, "skinTaken", { takenSkins: Array.from(takenSkins[team]) });
+          }
+        }
+      });
+
+      if (gamePhase === "waiting" && Object.keys(players).length >= 2) {
         startGame();
       } else {
         broadcastState();
@@ -657,9 +720,15 @@ wss.on("connection", (ws) => {
       startGame();
     }
 
+    if (type === "forceEnd") {
+      if (gamePhase === "playing" || gamePhase === "countdown") {
+        endGame();
+      }
+    }
+
     if (type === "move" && gamePhase === "playing") {
       const player = players[id];
-      if (!player) return; 
+      if (!player) return;
       if (player.inactiveUntil && Date.now() < player.inactiveUntil) return;
       // Throttle : max 25 inputs/s par joueur
       const now = Date.now();
@@ -679,9 +748,9 @@ wss.on("connection", (ws) => {
         player.lastDirY = data.y;
       } else if (typeof data === 'string') {
         switch (data) {
-          case "up":    newY -= SPEED; player.lastDirX = 0; player.lastDirY = -1; break;
-          case "down":  newY += SPEED; player.lastDirX = 0; player.lastDirY = 1; break;
-          case "left":  newX -= SPEED; player.lastDirX = -1; player.lastDirY = 0; break;
+          case "up": newY -= SPEED; player.lastDirX = 0; player.lastDirY = -1; break;
+          case "down": newY += SPEED; player.lastDirX = 0; player.lastDirY = 1; break;
+          case "left": newX -= SPEED; player.lastDirX = -1; player.lastDirY = 0; break;
           case "right": newX += SPEED; player.lastDirX = 1; player.lastDirY = 0; break;
         }
       }
@@ -699,13 +768,13 @@ wss.on("connection", (ws) => {
         checkPickup(player);
       }
       needsBroadcast = true;
-    } 
+    }
 
     if (type === "dash" && gamePhase === "playing") {
       const player = players[id];
       if (!player) return;
       if (player.inactiveUntil && Date.now() < player.inactiveUntil) return;
-      
+
       if (player.dashCooldown && Date.now() < player.dashCooldown) return;
 
       const dashForce = 150;
@@ -716,7 +785,7 @@ wss.on("connection", (ws) => {
 
       const oldX = player.x;
       const oldY = player.y;
-      
+
       let newX = oldX + dirX * dashForce;
       let newY = oldY + dirY * dashForce;
 
@@ -726,29 +795,29 @@ wss.on("connection", (ws) => {
       if (isPosValid(player.x, newY, player)) {
         player.y = newY;
       }
-      
+
       player.dashCooldown = Date.now() + 10000;
-      
+
       checkTrap(player);
       checkPush(player);
       needsBroadcast = true;
     }
-// ==========================================================
+    // ==========================================================
     // 3. BLOC ATTAQUE AU CORPS-À-CORPS (SABRE)
     // ==========================================================
     if (type === "taper" && gamePhase === "playing") {
       const player = players[id];
       if (!player) return;
       if (player.inactiveUntil && Date.now() < player.inactiveUntil) return;
-      
+
       if (player.taperCooldown && Date.now() < player.taperCooldown) return;
-      player.taperCooldown = Date.now() + 1500; 
+      player.taperCooldown = Date.now() + 1500;
 
       // LIGNE AJOUTÉE ICI : Indique le temps de l'animation d'attaque (300ms)
-      player.attackEndsAt = Date.now() + 500; 
+      player.attackEndsAt = Date.now() + 500;
 
       // 1. Calculer où le sabre frappe
-      const dirX = player.lastDirX || 1; 
+      const dirX = player.lastDirX || 1;
       const dirY = player.lastDirY || 0;
       const length = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
       const nx = dirX / length;
@@ -756,22 +825,24 @@ wss.on("connection", (ws) => {
 
       const swordX = player.x + nx * 50;
       const swordY = player.y + ny * 50;
-      const SWORD_RADIUS = 50; 
+      const SWORD_RADIUS = 50;
 
       // 2. Vérifier si un adversaire est touché
       const opponentTeam = player.team === "pirate" ? "monstre" : "pirate";
-      
+
       Object.values(players).forEach(other => {
-        if (other.team === opponentTeam && (!other.inactiveUntil || Date.now() >= other.inactiveUntil)) {
+        if (other.team === opponentTeam && (!other.inactiveUntil || Date.now() >= other.inactiveUntil) && (!other.invincibleUntil || Date.now() >= other.invincibleUntil)) {
           const dx = other.x - swordX;
           const dy = other.y - swordY;
           if (Math.sqrt(dx * dx + dy * dy) < SWORD_RADIUS) {
-             other.inactiveUntil = Date.now() + INACTIVE_DURATION; 
-             other.invincibleUntil = Date.now() + INACTIVE_DURATION + 2000;
-             deaths[other.team]++;
-             other.x = other.team === "pirate" ? 100 : ARENA.width - 100;
-             other.y = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
-             console.log(`⚔️ ${player.pseudo} a tranché ${other.pseudo} !`);
+            other.inactiveUntil = Date.now() + INACTIVE_DURATION;
+            other.invincibleUntil = Date.now() + INACTIVE_DURATION + 2000;
+            other.respawnProtected = true;
+            deaths[other.team]++;
+            const respawnPos = getRandomPositionInZone(other.team);
+            other.x = respawnPos.x;
+            other.y = respawnPos.y;
+            console.log(`⚔️ ${player.pseudo} a tranché ${other.pseudo} !`);
           }
         }
       });
@@ -781,10 +852,29 @@ wss.on("connection", (ws) => {
     }
   }); // Fin de ws.on("message")
   ws.on("close", () => {
+    // Libérer le skin si le joueur était en jeu
     if (players[id]) {
-      console.log(`${players[id].pseudo} a quitte la partie`);
-      delete players[id]; 
+      const team = players[id].team;
+      const skinId = players[id].skinId;
+      takenSkins[team].delete(skinId);
+      console.log(`${players[id].pseudo} a quitte la partie (skin ${skinId} libéré)`);
+      delete players[id];
       needsBroadcast = true;
+
+      // Notifier les joueurs en sélection
+      wss.clients.forEach(client => {
+        if (client.readyState === client.OPEN && pendingPlayers[client._playerId]) {
+          const pendingTeam = pendingPlayers[client._playerId].team;
+          if (pendingTeam === team) {
+            send(client, "skinTaken", { takenSkins: Array.from(takenSkins[team]) });
+          }
+        }
+      });
+    }
+    // Nettoyer les joueurs en attente de sélection
+    if (pendingPlayers[id]) {
+      console.log(`${pendingPlayers[id].pseudo} a quitté avant de choisir un skin`);
+      delete pendingPlayers[id];
     }
   });
 });

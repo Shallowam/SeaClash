@@ -1,75 +1,94 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Pirate Controller</title>
-    <link rel="stylesheet" href="style.css?v=3" />
-  </head>
-  <body>
 
-    <div id="screen-join" class="screen">
-      
-      <div class="sc-logo"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Pirate Controller</title>
+  <link rel="stylesheet" href="style.css?v=3" />
+</head>
 
-      <h2 class="sc-label">NOM DU JOUEUR</h2>
+<body>
 
-      <div class="sc-input-group">
-        <div class="sc-helm-deco"></div>
-        <div class="sc-input-banner">
-          <input type="text" id="pseudo" placeholder="..." maxlength="12" autocomplete="off" />
-        </div>
+  <div id="screen-join" class="screen">
+
+    <div class="sc-logo"></div>
+
+    <h2 class="sc-label">NOM DU JOUEUR</h2>
+
+    <div class="sc-input-group">
+      <div class="sc-helm-deco"></div>
+      <div class="sc-input-banner">
+        <input type="text" id="pseudo" placeholder="..." maxlength="12" autocomplete="off" />
       </div>
-
-      <div id="btn-join" class="sc-btn-banner"></div>
     </div>
 
-    <div id="screen-controller" class="screen hidden">
+    <div id="btn-join" class="sc-btn-banner"></div>
+  </div>
 
-      <div id="gouvernail-deco"></div>
+  <!-- ÉCRAN DE SÉLECTION DE PERSONNAGE -->
+  <div id="screen-select" class="screen hidden">
+    <div class="select-bg">
+      <div class="select-header">
+        <div class="select-team-badge" id="select-team-badge">TEAM PIRATE</div>
+        <h2 class="select-title">CHOISIS TON PERSONNAGE</h2>
+      </div>
+      <div class="select-grid" id="select-grid">
+        <!-- Les personnages seront ajoutés dynamiquement par JS -->
+      </div>
+      <div class="select-footer">
+        <p class="select-hint">Touche un personnage pour le sélectionner</p>
+      </div>
+    </div>
+  </div>
 
-      <div class="hud-top">
-        <div class="banniere-side hud-deaths-banni">
-          <span class="hud-value" id="ctrl-opponent-deaths-score">0</span>
-          <span class="hud-icon">💀</span>
-        </div>
+  <div id="screen-controller" class="screen hidden">
 
-        <div class="banniere-center hud-player-info">
-          <span class="hud-label" id="player-pseudo">-</span>
-          <span class="hud-value badge" id="player-team">-</span>
-        </div>
+    <div id="gouvernail-deco"></div>
 
-        <div class="banniere-side hud-timer">
-          <span class="hud-icon sablier-deco">⌛</span>
-          <span class="hud-value" id="ctrl-timer">10:00</span>
-        </div>
+    <div class="hud-top">
+      <div class="banniere-side hud-deaths-banni">
+        <span class="hud-value" id="ctrl-opponent-deaths-score">0</span>
+        <span class="hud-icon">💀</span>
       </div>
 
-      <div class="joystick-zone">
-        <div id="joystick-base">
-          <div id="joystick-knob"></div>
-        </div>
+      <div class="banniere-center hud-player-info">
+        <span class="hud-label" id="player-pseudo">-</span>
+        <span class="hud-value badge" id="player-team">-</span>
       </div>
 
-      <div class="buttons-zone">
-        <div id="btn-dash-container">
-          <button id="btn-dash"></button>
-          <span id="btn-dash-cooldown-text" class="hidden">10</span>
-        </div>
-
-        <div id="btn-taper-base" class="button-taper-base">
-          <button id="btn-taper"></button>
-        </div>
+      <div class="banniere-side hud-timer">
+        <span class="hud-icon sablier-deco">⌛</span>
+        <span class="hud-value" id="ctrl-timer">10:00</span>
       </div>
-      
-      <div id="abordage-notif" class="hidden">⚔️ ABORDAGE !</div>
-      <div id="screen-inactive" class="hidden">
-        <div id="inactive-label">INACTIF</div>
-        <div id="inactive-countdown">15</div>
-      </div>
-
     </div>
 
-    <script src="script.js?v=3"></script>
-  </body>
+    <div class="joystick-zone">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <div class="buttons-zone">
+      <div id="btn-dash-container">
+        <button id="btn-dash"></button>
+        <span id="btn-dash-cooldown-text" class="hidden">10</span>
+      </div>
+
+      <div id="btn-taper-base" class="button-taper-base">
+        <button id="btn-taper"></button>
+      </div>
+    </div>
+
+    <div id="abordage-notif" class="hidden">⚔️ ABORDAGE !</div>
+    <div id="screen-inactive" class="hidden">
+      <div id="inactive-label">INACTIF</div>
+      <div id="inactive-countdown">15</div>
+    </div>
+
+  </div>
+
+  <script src="script.js?v=3"></script>
+</body>
+
 </html>

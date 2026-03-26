@@ -7,7 +7,8 @@
 :root {
   --color-rouge: #ff3c3c;
   --color-rouge-deaths: #8b0000;
-  --color-parchemin: #f5e4c3; /* Fond beige mock-up image_13.png */
+  --color-parchemin: #f5e4c3;
+  /* Fond beige mock-up image_13.png */
   --font-pirate: 'Pirata One', cursive;
   --font-pirate-num: 'Cinzel Decorative', cursive;
 }
@@ -20,7 +21,8 @@
   touch-action: none;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -31,7 +33,9 @@ html, body {
   background-color: var(--color-parchemin);
 }
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 .screen {
   position: absolute;
@@ -62,7 +66,7 @@ html, body {
   background-repeat: no-repeat;
   background-position: center;
   margin-bottom: 20px;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
 }
 
 /* Titre "NOM DU JOUEUR" */
@@ -72,38 +76,45 @@ html, body {
   font-size: 1.8rem;
   font-weight: 900;
   margin: 0 0 10px 0;
-  z-index: 10; /* Devant le gouvernail */
+  z-index: 10;
+  /* Devant le gouvernail */
 }
 
 /* Groupe Input : Gouvernail + Parchemin */
 .sc-input-group {
   position: relative;
-  width: 100%; /* Occupe toute la largeur pour centrer librement */
+  width: 100%;
+  /* Occupe toute la largeur pour centrer librement */
   max-width: 400px;
-  height: 250px; /* Plus grand espace pour le gouvernail imposant */
+  height: 250px;
+  /* Plus grand espace pour le gouvernail imposant */
   display: flex;
   justify-content: center;
-  align-items: flex-end; /* Parchemin en bas de la zone */
-  margin-bottom: 50px; 
+  align-items: flex-end;
+  /* Parchemin en bas de la zone */
+  margin-bottom: 50px;
 }
 
 /* --- CORRECTION GOUVERNAIL PORTRAIT (image_13.png & content_file_11.jpg) --- */
 .sc-helm-deco {
   position: absolute;
   /* On le remonte énormément pour forcer le croppage en haut */
-  top: -100px; 
+  top: -100px;
   left: 50%;
   transform: translateX(-50%);
   /* On le rend très grand pour qu'il soit imposant */
-  width: 350px; 
+  width: 350px;
   height: 350px;
   background-image: url('assets/gouvernail-manette.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  z-index: 1; /* Derrière le parchemin */
-  opacity: 0.8; /* Légèrement transparent mock-up image_13.png */
-  mix-blend-mode: multiply; /* Enlève le fond blanc du JPG */
+  z-index: 1;
+  /* Derrière le parchemin */
+  opacity: 0.8;
+  /* Légèrement transparent mock-up image_13.png */
+  mix-blend-mode: multiply;
+  /* Enlève le fond blanc du JPG */
 }
 
 /* Parchemin de saisie (content_file_12.png) */
@@ -117,8 +128,9 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 5; /* Devant le gouvernail */
-  filter: drop-shadow(0px 5px 8px rgba(0,0,0,0.4));
+  z-index: 5;
+  /* Devant le gouvernail */
+  filter: drop-shadow(0px 5px 8px rgba(0, 0, 0, 0.4));
 }
 
 .sc-input-banner input {
@@ -132,7 +144,7 @@ html, body {
   font-family: Arial, sans-serif;
   color: #333;
   text-align: center;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .sc-input-banner input:focus {
@@ -151,7 +163,7 @@ html, body {
   border: none;
   background-color: transparent;
   cursor: pointer;
-  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
   transition: transform 0.1s, opacity 0.3s;
   z-index: 10;
 }
@@ -163,14 +175,15 @@ html, body {
 /* CORRECTION : Style pour griser le bouton pendant le chargement */
 .sc-btn-banner.loading {
   opacity: 0.5;
-  pointer-events: none; /* Désactive les clics */
+  pointer-events: none;
+  /* Désactive les clics */
 }
 
 /* =============================================================================
    ÉCRAN 2 : LA MANETTE PIRATE (Reste inchangé)
    ============================================================================= */
 #screen-controller {
-  background-image: url('assets/fond-manette.png'); 
+  background-image: url('assets/fond-manette.png');
   background-size: cover;
   background-position: top center;
   background-repeat: no-repeat;
@@ -180,7 +193,7 @@ html, body {
 
 #gouvernail-deco {
   position: absolute;
-  top: -60px; 
+  top: -60px;
   left: 50%;
   transform: translateX(-50%);
   width: 250px;
@@ -189,8 +202,8 @@ html, body {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  z-index: 1; 
-  mix-blend-mode: screen; 
+  z-index: 1;
+  mix-blend-mode: screen;
 }
 
 .hud-top {
@@ -201,7 +214,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   padding: 0 15px;
-  z-index: 5; 
+  z-index: 5;
   pointer-events: none;
 }
 
@@ -216,11 +229,16 @@ html, body {
   font-weight: 900;
   font-size: 1.5rem;
   gap: 10px;
-  filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.4));
+  filter: drop-shadow(0px 4px 5px rgba(0, 0, 0, 0.4));
 }
 
-.hud-deaths-banni { color: var(--color-rouge-deaths); }
-.hud-timer { color: #d84800; }
+.hud-deaths-banni {
+  color: var(--color-rouge-deaths);
+}
+
+.hud-timer {
+  color: #d84800;
+}
 
 .banniere-center {
   width: 280px;
@@ -231,8 +249,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 15px; 
-  filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5));
+  margin-top: 15px;
+  filter: drop-shadow(0px 4px 5px rgba(0, 0, 0, 0.5));
 }
 
 #player-pseudo {
@@ -248,8 +266,14 @@ html, body {
   font-weight: 900;
   font-family: Arial, sans-serif;
 }
-#player-team.monstre { color: #0055ff; } 
-#player-team.pirate { color: #cc0000; }  
+
+#player-team.monstre {
+  color: #0055ff;
+}
+
+#player-team.pirate {
+  color: #cc0000;
+}
 
 .joystick-zone {
   position: absolute;
@@ -263,7 +287,7 @@ html, body {
 #joystick-base {
   width: 100%;
   height: 100%;
-  background-color: rgba(100, 150, 255, 0.2); 
+  background-color: rgba(100, 150, 255, 0.2);
   border: 4px solid rgba(100, 150, 255, 0.4);
   border-radius: 50%;
   display: flex;
@@ -274,7 +298,7 @@ html, body {
 #joystick-knob {
   width: 100px;
   height: 100px;
-  background-image: url('assets/joystick-manette.png'); 
+  background-image: url('assets/joystick-manette.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -307,17 +331,19 @@ html, body {
   width: 100%;
   height: 100%;
   background-color: transparent;
-  background-image: url('assets/dash-manette.png'); 
+  background-image: url('assets/dash-manette.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
   border: none;
   cursor: pointer;
-  filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.3));
+  filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.3));
   transition: filter 0.3s;
 }
 
-#btn-dash:disabled { filter: grayscale(100%) brightness(50%); }
+#btn-dash:disabled {
+  filter: grayscale(100%) brightness(50%);
+}
 
 #btn-dash-cooldown-text {
   position: absolute;
@@ -335,13 +361,13 @@ html, body {
   right: 0;
   width: 180px;
   height: 180px;
-  background-color: rgba(255, 100, 100, 0.2); 
+  background-color: rgba(255, 100, 100, 0.2);
   border: 4px solid rgba(255, 100, 100, 0.4);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  filter: drop-shadow(0 8px 15px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.5));
   z-index: 15;
 }
 
@@ -349,7 +375,7 @@ html, body {
   width: 140px;
   height: 140px;
   background-color: transparent;
-  background-image: url('assets/smash-manette.png'); 
+  background-image: url('assets/smash-manette.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -363,13 +389,13 @@ html, body {
   top: 150px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: var(--font-pirate);
+  font-family: var(--font-pirate-num);
   background: var(--color-rouge);
   color: white;
   padding: 10px 30px;
   border-radius: 10px;
   font-size: 2.2rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
   border: 4px solid white;
   z-index: 100;
 }
@@ -380,27 +406,215 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(233, 69, 96, 0.6); 
+  background-color: rgba(233, 69, 96, 0.6);
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 200; 
-  pointer-events: all; 
+  z-index: 200;
+  pointer-events: all;
 }
 
 #inactive-label {
   font-family: var(--font-pirate);
   font-size: 4.5rem;
-  text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
   margin-bottom: 20px;
 }
 
 #inactive-countdown {
   font-family: var(--font-pirate-num);
-  font-size: 12rem; 
+  font-size: 12rem;
   font-weight: 900;
   color: #ffcccc;
-  text-shadow: 0 0 30px rgba(255,0,0,1), 0 0 5px #000;
+  text-shadow: 0 0 30px rgba(255, 0, 0, 1), 0 0 5px #000;
+}
+
+/* =============================================================================
+   ÉCRAN 1.5 : SÉLECTION DE PERSONNAGE
+   ============================================================================= */
+
+#screen-select {
+  z-index: 50;
+}
+
+.select-bg {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #1a0a2e 0%, #2d1b4e 30%, #1a0a2e 70%, #0d0620 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.select-header {
+  text-align: center;
+  margin-bottom: 15px;
+  flex-shrink: 0;
+}
+
+.select-team-badge {
+  display: inline-block;
+  padding: 8px 30px;
+  border-radius: 30px;
+  font-family: Arial, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.select-team-badge.pirate {
+  background: linear-gradient(135deg, #cc0000, #8b0000);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(204, 0, 0, 0.5);
+}
+
+.select-team-badge.monstre {
+  background: linear-gradient(135deg, #0055ff, #003399);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0, 85, 255, 0.5);
+}
+
+.select-title {
+  font-family: Arial, sans-serif;
+  color: #f5e4c3;
+  font-size: 1.3rem;
+  font-weight: 900;
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 1px;
+}
+
+.select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  flex: 1;
+  align-content: start;
+  padding: 5px;
+}
+
+.skin-card {
+  position: relative;
+  background: linear-gradient(145deg, rgba(245, 228, 195, 0.15), rgba(245, 228, 195, 0.05));
+  border: 3px solid rgba(245, 228, 195, 0.25);
+  border-radius: 16px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+}
+
+.skin-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 13px;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.1), transparent 60%);
+  pointer-events: none;
+}
+
+.skin-card:active:not(.taken) {
+  transform: scale(0.92);
+}
+
+.skin-card.selected {
+  border-color: #ffd700;
+  background: linear-gradient(145deg, rgba(255, 215, 0, 0.3), rgba(255, 165, 0, 0.15));
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 215, 0, 0.1);
+  animation: skin-selected-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes skin-selected-glow {
+  from {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 215, 0, 0.1);
+  }
+
+  to {
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.7), inset 0 0 20px rgba(255, 215, 0, 0.15);
+  }
+}
+
+.skin-card.taken {
+  opacity: 0.35;
+  filter: grayscale(100%);
+  pointer-events: none;
+  border-color: rgba(100, 100, 100, 0.3);
+}
+
+.skin-card.taken::after {
+  content: '🔒';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  z-index: 5;
+}
+
+.skin-card-img {
+  width: 70px;
+  height: 90px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+}
+
+.skin-card-name {
+  font-family: Arial, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(245, 228, 195, 0.8);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.select-footer {
+  flex-shrink: 0;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.select-hint {
+  font-family: Arial, sans-serif;
+  font-size: 0.85rem;
+  color: rgba(245, 228, 195, 0.5);
+  margin: 0;
+  font-style: italic;
+}
+
+/* Animation d'entrée des cartes */
+@keyframes skin-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.skin-card {
+  animation: skin-card-appear 0.4s ease-out backwards;
 }

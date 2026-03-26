@@ -44,12 +44,24 @@
         </div>
       </div>
 
-      <div id="waiting">En attente de joueurs...</div>
+      <div id="waiting">
+        <div class="waiting-content">
+          <img src="/controller/assets/logo-manette.png" alt="Sea Clash" class="waiting-logo">
+          <div class="waiting-text">En attente de joueurs...</div>
+          <div class="waiting-counter" id="waiting-counter">0 / 2</div>
+          <div class="waiting-hint">Scannez le QR code pour rejoindre !</div>
+          <div id="waiting-qr" class="waiting-qr"></div>
+        </div>
+      </div>
     </div>
   </div>
 
   <div id="abordage-banner" class="hidden">
-    ⚔️ ABORDAGE ! <span id="abordage-countdown"></span>
+    <img src="assets/À L'ABORDAGE.png" alt="A l'abordage" class="abordage-popup-img">
+  </div>
+
+  <div id="abordage-timer" class="hidden">
+    <span id="abordage-countdown">45</span>
   </div>
 
   <div id="countdown-overlay" class="overlay hidden">
@@ -58,19 +70,15 @@
 
   <div id="screen-gameover" class="overlay hidden">
     <div class="gameover-card">
-      <h1 id="gameover-title">Fin de la partie !</h1>
+      <img src="/controller/assets/logo-manette.png" alt="Sea Clash" class="gameover-logo">
+      <img id="gameover-title-img" src="assets/win-pirate.png" alt="Victoire" class="win-img">
 
-      <div class="gameover-scores">
-        <div class="gameover-team pirate">
-          <span class="team-dot pirate" style="background: #cc0000;"></span>
-          Pirates
-          <span class="gameover-points" id="final-pirate" style="color: #cc0000;">💀 0</span>
+      <div class="gameover-scores-new">
+        <div class="result-ribbon pirate-ribbon" id="ribbon-pirate">
+          <span class="ribbon-score" id="final-pirate">0</span>
         </div>
-        <div class="gameover-vs">VS</div>
-        <div class="gameover-team monstre">
-          <span class="team-dot monstre" style="background: #0055ff;"></span>
-          Monstres
-          <span class="gameover-points" id="final-monstre" style="color: #0055ff;">💀 0</span>
+        <div class="result-ribbon monstre-ribbon" id="ribbon-monstre">
+          <span class="ribbon-score" id="final-monstre">0</span>
         </div>
       </div>
 
@@ -78,7 +86,7 @@
     </div>
   </div>
 
-  <button id="btn-restart">⟳ Restart</button>
+  <button id="btn-force-end">🏁 Fin express (Debug)</button>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script src="script.js?v=5"></script>
