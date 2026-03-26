@@ -32,7 +32,7 @@ body {
   display: flex;
   align-items: center;
   gap: 2rem;
-  z-index: 10; /* Au-dessus de tout */
+  z-index: 1000; /* Au-dessus de l'arène plein écran */
 }
 
 /* Bloc de score d'une equipe */
@@ -98,26 +98,46 @@ body {
    ARENA (zone de jeu)
    ============================================================================= */
 
-/* Wrapper qui centre l'arene dans l'espace disponible */
+/* Wrapper qui centre l'arene dans tout l'ecran */
 #arena-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100vw;
-  height: calc(100vh - 80px); /* Toute la hauteur moins l'espace du HUD */
-  margin-top: 80px;
+  background: #000; /* Barres noires si ratio ne correspond pas */
 }
 
-/* L'arene elle-meme : taille fixe de 1200x800, redimensionnee via transform: scale() */
+/* L'arene elle-meme : 1200x675, agrandie/reduite via transform: scale() */
 #arena {
-  position: relative; /* Necessaire pour que les enfants en position: absolute se placent dedans */
+  position: relative;
   width: 1200px;
-  height: 800px;
-  background: linear-gradient(to right, #1e0f18 50%, #0e1826 50%);
-  border-radius: 16px;
-  border: 2px solid #333;
+  height: 675px;
+  background: #000;
   overflow: hidden;
-  transform-origin: center center; /* Le scale se fait depuis le centre */
+  transform-origin: center center;
+  flex-shrink: 0;
+}
+
+/* Couches de Décor du Fond Marin */
+#bg-sea {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0; /* Tout en bas, sous les joueurs */
+}
+
+#bg-islands {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  pointer-events: none; /* Laisse passer les clics au besoin */
+  z-index: 1; /* Sous les joueurs, sur l'océan */
 }
 
 /* Passerelles sur la ligne centrale (ouvertes pendant l'abordage) */
@@ -232,15 +252,13 @@ body {
   border: 3px solid white;
 }
 
-/* Couleurs par equipe avec un halo lumineux (box-shadow) */
+/* Couleurs par equipe — sans lueur */
 .player-dot.rouge {
   background: #e94560;
-  box-shadow: 0 0 12px #e9456066;
 }
 
 .player-dot.bleu {
   background: #4ea8de;
-  box-shadow: 0 0 12px #4ea8de66;
 }
 
 /* Pseudo affiche sous le cercle */
@@ -381,7 +399,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   backdrop-filter: blur(8px);
-  z-index: 10;
+  z-index: 1000;
   transition: background 0.15s;
 }
 
@@ -402,7 +420,7 @@ body {
   padding: 1rem;
   border-radius: 16px;
   backdrop-filter: blur(8px);
-  z-index: 10;
+  z-index: 1000;
 }
 
 /* Le QR code genere est une balise <img> a l'interieur de cette div */
@@ -467,36 +485,19 @@ body {
 
 .gem-container {
   position: absolute;
-  width: 70px;  
-  height: 70px;
+  width: 42px;  
+  height: 42px;
   transform: translate(-50%, -50%);
   z-index: 5;
   pointer-events: none; 
 }
 
 .gem-halo {
-  position: absolute;
-  top: -20px;
-  left: -20px;
-  right: -20px;
-  bottom: -20px;
-  border-radius: 50%;
-  filter: blur(2px); 
-  z-index: 1; 
+  display: none; /* Halos supprimés */
 }
 
-.halo-bombe {
-  background: radial-gradient(circle, rgba(50, 255, 100, 0.4) 0%, rgba(50, 255, 100, 0) 70%);
-}
-
-.halo-rouge {
-  background: radial-gradient(circle, rgba(255, 0, 0, 0.8) 0%, rgba(255, 0, 0, 0) 70%);
-}
-
-/* Le halo de la Corde de Téléportation */
-.halo-corde {
-  background: radial-gradient(circle, rgba(200, 180, 120, 0.6) 0%, rgba(200, 180, 120, 0) 70%);
-}
+/* Halos supprimés — classes conservées pour compatibilité JS */
+.halo-bombe, .halo-rouge, .halo-corde { display: none; }
 
 .gem-image {
   position: relative;
@@ -543,11 +544,10 @@ body {
    NOUVEAU : VISUELS DES BOMBES LANCÉES & EXPLOSIONS
    ============================================================================= */
 
-/* La bombe en vol */
 .bombe-splash {
   position: absolute;
-  width: 60px; 
-  height: 60px;
+  width: 36px; 
+  height: 36px;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -625,15 +625,14 @@ body {
 
 /* Attaque Requin Géant (Gemme Rouge) */
 .trap.shark {
-  width: 500px;
-  height: 300px;
+  width: 320px;
+  height: 190px;
   background-image: url('assets/shark.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  /* La transition dure 10 secondes exactement comme prévu */
   transition: left 10s linear;
-  z-index: 4; /* Au-dessus des sables mouvants */
+  z-index: 4;
 }
 
 /* Classe d'avertissement (clignotement avant apparition et disparition) */

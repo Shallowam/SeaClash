@@ -59,9 +59,9 @@ const passerelleBottom = document.getElementById("passerelle-bottom");
 // RESPONSIVE : ADAPTER L'ARENE A L'ECRAN
 // =============================================================================
 function fitArena() {
-  const maxW = arenaWrapper.clientWidth - 32;
-  const maxH = arenaWrapper.clientHeight - 32;
-  const scale = Math.min(maxW / 1200, maxH / 800, 1);
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight;
+  const scale = Math.min(maxW / 1200, maxH / 675);
   arena.style.transform = `scale(${scale})`;
 }
 fitArena();
@@ -157,7 +157,7 @@ ws.addEventListener("message", (event) => {
             <img src="assets/stars.png" class="ko-star ko-star-1" alt="star1">
             <img src="assets/stars.png" class="ko-star ko-star-2" alt="star2">
           </div>
-          <img class="player-sprite" src="${idleSrc}" style="width: 85px; height: 110px; display: block; pointer-events: none;">
+          <img class="player-sprite" src="${idleSrc}" style="width: 52px; height: 68px; display: block; pointer-events: none;">
           <span class="player-name">${p.pseudo}</span>
         `;
         arena.appendChild(el);
@@ -204,8 +204,8 @@ ws.addEventListener("message", (event) => {
           if (el.dataset.state !== "ko") {
               clearInterval(el.attackInterval); // On stoppe l'attaque
               sprite.src = `assets/${teamFolder}/${persoName}-KO.png`; 
-              sprite.style.width = "110px"; 
-              sprite.style.height = "85px";
+              sprite.style.width = "66px"; 
+              sprite.style.height = "52px";
               sprite.style.opacity = "0.6"; 
               koEffects.style.display = "block"; 
               el.dataset.state = "ko";
@@ -218,8 +218,8 @@ ws.addEventListener("message", (event) => {
           if (el.dataset.state !== "attack") {
               el.dataset.state = "attack";
               koEffects.style.display = "none";
-              sprite.style.width = "85px";
-              sprite.style.height = "110px";
+              sprite.style.width = "52px";
+              sprite.style.height = "68px";
               sprite.style.opacity = "1";
               
               // On affiche la frame 1 immédiatement
@@ -242,8 +242,8 @@ ws.addEventListener("message", (event) => {
           if (el.dataset.state === "ko" || el.dataset.state === "attack") {
               clearInterval(el.attackInterval); // On stoppe le sabre
               sprite.src = `assets/${teamFolder}/${persoName}-Stat.png`;
-              sprite.style.width = "85px";
-              sprite.style.height = "110px";
+              sprite.style.width = "52px";
+              sprite.style.height = "68px";
               sprite.style.opacity = "1";
               koEffects.style.display = "none";
               el.dataset.state = "idle";

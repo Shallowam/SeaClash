@@ -25,7 +25,12 @@ app.get("/", (req, res) => {
 // CONFIGURATION DU JEU
 // =============================================================================
 
-const ARENA = { width: 1200, height: 800 }; 
+const ARENA = { width: 1200, height: 675 }; 
+const ZONES = {
+  pirate: { minX: 100, maxX: 450, minY: 100, maxY: 575 },
+  monstre: { minX: 750, maxX: 1100, minY: 100, maxY: 575 }
+};
+
 const SPEED = 18; 
 const GAME_DURATION = 10 * 60 * 1000; 
 const RESTART_DELAY = 30 * 1000; 
@@ -48,8 +53,8 @@ const APPLE_TELEPORT_DURATION  = 15 * 1000;
 const LINE_TRAP_DURATION       = 3 * 1000;    
 const LINE_TRAP_TOLERANCE      = 40;          
 const PASSERELLES = [
-  { y: 133, height: 120 }, 
-  { y: 667, height: 120 }, 
+  { y: 150, height: 120 }, 
+  { y: 525, height: 120 }, 
 ];
 
 // =============================================================================
@@ -87,16 +92,26 @@ const GEM_COLORS = ["bombe", "rouge", "corde"];
 
 function spawnFruit() {
   const id = String(nextFruitId++);
-  const color = GEM_COLORS[Math.floor(Math.random() * GEM_COLORS.length)];
+
+  // La "corde" ne peut apparaître qu'une seule fois à la fois sur la map
+  const cordeExists = Object.values(fruits).some(f => f.color === "corde");
+  const availableColors = cordeExists
+    ? ["bombe", "rouge"]
+    : GEM_COLORS;
+
+  const color = availableColors[Math.floor(Math.random() * availableColors.length)];
   
+  const side = Math.random() < 0.5 ? "pirate" : "monstre";
+  const z = ZONES[side];
+
   const now = Date.now();
   fruits[id] = {
     id,
     color: color,
-    x: Math.floor(Math.random() * (ARENA.width - 80)) + 40,
-    y: Math.floor(Math.random() * (ARENA.height - 80)) + 40,
-    activeAt: now + 2000,        // Clignote pendant 2 secondes (Alerte)
-    expiresAt: now + 12000       // NOUVEAU : Disparaît au bout de 12s (2s alerte + 10s actif)
+    x: Math.floor(Math.random() * (z.maxX - z.minX)) + z.minX,
+    y: Math.floor(Math.random() * (z.maxY - z.minY)) + z.minY,
+    activeAt: now + 2000,        
+    expiresAt: now + 12000       
   };
   return id;
 }
@@ -133,24 +148,23 @@ function checkPickup(player) {
 
         if (isHome) {
           // 1. IL EST CHEZ LUI : On l'envoie à l'abordage chez l'ennemi !
-          player.x = player.team === "pirate"
-            ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30 // Pirate va à droite
-            : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30;                  // Monstre va à gauche
+          const destZone = ZONES[player.team === "pirate" ? "monstre" : "pirate"];
+          player.x = Math.floor(Math.random() * (destZone.maxX - destZone.minX)) + destZone.minX;
           
           player.appleReturn = Date.now() + APPLE_TELEPORT_DURATION; // On lance le chrono de retour automatique (15s)
           console.log(`🪢 ${player.pseudo} a pris une Corde -> TÉLÉPORTÉ CHEZ L'ENNEMI !`);
         } else {
           // 2. IL EST DÉJÀ CHEZ L'ENNEMI : Billet de retour anticipé !
-          player.x = player.team === "pirate"
-            ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30                   // Pirate rentre à gauche
-            : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30;// Monstre rentre à droite
+          const homeZone = ZONES[player.team];
+          player.x = Math.floor(Math.random() * (homeZone.maxX - homeZone.minX)) + homeZone.minX;
           
           delete player.appleReturn; // On annule le chrono puisqu'il est rentré tout seul !
           console.log(`🪢 ${player.pseudo} a pris une Corde -> RETOUR À LA BASE !`);
         }
         
         // On lui donne une position Y aléatoire dans tous les cas
-        player.y = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
+        const yz = ZONES.pirate;
+        player.y = Math.floor(Math.random() * (yz.maxY - yz.minY)) + yz.minY;
       }
       else if (color === "rouge") {
         const sharkId = "shark_" + Date.now();
@@ -226,19 +240,18 @@ function checkPickup(player) {
 // =============================================================================
 
 function respawnRedTrapsForSide(side) {
-  const xBase = side === "pirate" ? 0 : ARENA.width / 2;
+  const z = ZONES[side];
   for (let i = 0; i < TRAP_COUNT; i++) {
-    const id = "s" + side + i; // ID unique (ex: spirate1, smonstre1)
+    const id = "s" + side + i; 
     
-    // On définit le moment d'apparition
     const now = Date.now();
     
     traps[id] = {
       id,
-      type: "sable", // On change le type pour "sable"
-      sprite: side,  // Définit si c'est 'pirate' ou 'monstre'
-      x: Math.floor(Math.random() * (ARENA.width / 2 - 100)) + xBase + 50,
-      y: Math.floor(Math.random() * (ARENA.height - 100)) + 50,
+      type: "sable",
+      sprite: side,  
+      x: Math.floor(Math.random() * (z.maxX - z.minX)) + z.minX,
+      y: Math.floor(Math.random() * (z.maxY - z.minY)) + z.minY,
       radius: TRAP_RADIUS,
       inactiveDuration: INACTIVE_DURATION,
       
@@ -299,20 +312,35 @@ function checkTrap(player) {
     }
 
     if (hit) {
+      // Si le joueur est déjà inactif, on ne réinitialise pas son timer
+      if (player.inactiveUntil && Date.now() < player.inactiveUntil) break;
+
       player.inactiveUntil = Date.now() + trap.inactiveDuration;
       player.respawnProtected = true;
       deaths[player.team]++;
-      let safeX, safeY, onTrap;
+
+      const teamZone = ZONES[player.team];
+      const SCATTER = 120; // Distance max de respawn autour du point de mort
+      let safeX, safeY, onTrap, attempts = 0;
       do {
-        safeX = player.team === "pirate"
-          ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30
-          : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30;
-        safeY = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
+        // Offset aléatoire proche du point de mort
+        safeX = player.x + (Math.random() * SCATTER * 2 - SCATTER);
+        safeY = player.y + (Math.random() * SCATTER * 2 - SCATTER);
+        // Clamp strict sur les bornes de l'île
+        safeX = Math.max(teamZone.minX, Math.min(teamZone.maxX, safeX));
+        safeY = Math.max(teamZone.minY, Math.min(teamZone.maxY, safeY));
         onTrap = Object.values(traps).some(t => {
           if (t.type === "line") return Math.abs(safeY - t.y) < t.tolerance;
-          if (t.type === "shark") return Math.abs(safeY - t.y) < 75; // Éviter la ligne du requin
+          if (t.type === "shark") return Math.abs(safeY - t.y) < 75;
           return Math.sqrt((safeX - t.x) ** 2 + ((safeY - t.y) * 2) ** 2) < t.radius;
         });
+        attempts++;
+        // Fallback après 20 tentatives : position aléatoire dans la zone
+        if (attempts > 20) {
+          safeX = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
+          safeY = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
+          break;
+        }
       } while (onTrap);
       player.x = safeX;
       player.y = safeY;
@@ -337,10 +365,9 @@ function checkPush(player) {
       deaths[other.team]++;
       let sx, sy, safe;
       do {
-        sx = other.team === "pirate"
-          ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30
-          : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30;
-        sy = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
+        const teamZone = ZONES[other.team];
+        sx = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
+        sy = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
         safe = !Object.values(traps).some(t => Math.sqrt((sx - t.x) ** 2 + ((sy - t.y) * 2) ** 2) < t.radius);
       } while (!safe);
       other.x = sx;
@@ -367,10 +394,9 @@ function startGame() {
   redTrapsActive = true;
 
   for (const player of Object.values(players)) {
-    player.x = player.team === "pirate"
-      ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30
-      : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30;
-    player.y = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
+    const teamZone = ZONES[player.team];
+    player.x = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
+    player.y = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
     delete player.inactiveUntil;
   }
 
@@ -464,10 +490,9 @@ function startGame() {
       for (const player of Object.values(players)) {
         if (player.appleReturn && Date.now() >= player.appleReturn) {
           delete player.appleReturn;
-          player.x = player.team === "pirate"
-            ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30
-            : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30;
-          player.y = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
+          const teamZone = ZONES[player.team];
+          player.x = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
+          player.y = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
         }
       }
       for (const player of Object.values(players)) {
@@ -531,13 +556,12 @@ wss.on("connection", (ws) => {
       const countPirate = Object.values(players).filter(p => p.team === "pirate").length;
       const countMonstre  = Object.values(players).filter(p => p.team === "monstre").length;
       const assignedTeam = countPirate <= countMonstre ? "pirate" : "monstre";
+      const z = ZONES[assignedTeam];
 
       players[id] = {
         id, pseudo: data.pseudo || "Anonyme", team: assignedTeam,
-        x: assignedTeam === "pirate"
-          ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30
-          : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30,
-        y: Math.floor(Math.random() * (ARENA.height - 100)) + 50,
+        x: Math.floor(Math.random() * (z.maxX - z.minX)) + z.minX,
+        y: Math.floor(Math.random() * (z.maxY - z.minY)) + z.minY,
       };
 
       console.log(`${players[id].pseudo} (${players[id].team}) a rejoint la partie`);
@@ -565,13 +589,13 @@ wss.on("connection", (ws) => {
       if (player.inactiveUntil && Date.now() < player.inactiveUntil) return; 
 
       const inAppleZone = player.appleReturn && Date.now() < player.appleReturn;
-      const xMin = inAppleZone
-        ? (player.team === "pirate" ? ARENA.width / 2 : 0)
-        : (player.team === "pirate" ? 0 : ARENA.width / 2);
-      const xMax = inAppleZone
-        ? (player.team === "pirate" ? ARENA.width : ARENA.width / 2)
-        : (player.team === "pirate" ? ARENA.width / 2 : ARENA.width);
+      const activeZoneKey = inAppleZone
+        ? (player.team === "pirate" ? "monstre" : "pirate")
+        : player.team;
+      const z = ZONES[activeZoneKey];
+
       const oldX = player.x;
+      const oldY = player.y;
 
       if (data && typeof data.x === 'number' && typeof data.y === 'number') {
         player.x += data.x * SPEED;
@@ -588,15 +612,20 @@ wss.on("connection", (ws) => {
       }
 
       if (!abordageActive || inAppleZone) {
-        player.x = Math.min(xMax, Math.max(xMin, player.x));
+        player.x = Math.min(z.maxX, Math.max(z.minX, player.x));
+        player.y = Math.min(z.maxY, Math.max(z.minY, player.y));
       } else {
-        const crossedMediane = (oldX < ARENA.width / 2) !== (player.x < ARENA.width / 2);
-        if (crossedMediane && !isInPasserelle(player.y)) {
-          player.x = oldX; 
+        player.x = Math.min(ZONES.monstre.maxX, Math.max(ZONES.pirate.minX, player.x));
+        player.y = Math.min(z.maxY, Math.max(z.minY, player.y));
+        if (player.x > ZONES.pirate.maxX && player.x < ZONES.monstre.minX) {
+          if (!isInPasserelle(player.y)) {
+            player.y = oldY; 
+            if (!isInPasserelle(player.y)) {
+              player.x = oldX; 
+            }
+          }
         }
-        player.x = Math.min(ARENA.width, Math.max(0, player.x));
       }
-      player.y = Math.min(ARENA.height - 30, Math.max(30, player.y)); 
 
       checkTrap(player);
       checkPush(player);
@@ -624,17 +653,24 @@ wss.on("connection", (ws) => {
       player.y += dirY * dashForce;
 
       const inAppleZone = player.appleReturn && Date.now() < player.appleReturn;
-      const xMin = inAppleZone ? (player.team === "pirate" ? ARENA.width / 2 : 0) : (player.team === "pirate" ? 0 : ARENA.width / 2);
-      const xMax = inAppleZone ? (player.team === "pirate" ? ARENA.width : ARENA.width / 2) : (player.team === "pirate" ? ARENA.width / 2 : ARENA.width);
+      const activeZoneKey = inAppleZone ? (player.team === "pirate" ? "monstre" : "pirate") : player.team;
+      const z = ZONES[activeZoneKey];
       
       if (!abordageActive || inAppleZone) {
-        player.x = Math.min(xMax, Math.max(xMin, player.x));
+        player.x = Math.min(z.maxX, Math.max(z.minX, player.x));
+        player.y = Math.min(z.maxY, Math.max(z.minY, player.y));
       } else {
-        const crossedMediane = (oldX < ARENA.width / 2) !== (player.x < ARENA.width / 2);
-        if (crossedMediane && !isInPasserelle(player.y)) player.x = oldX; 
-        player.x = Math.min(ARENA.width, Math.max(0, player.x));
+        player.x = Math.min(ZONES.monstre.maxX, Math.max(ZONES.pirate.minX, player.x));
+        player.y = Math.min(z.maxY, Math.max(z.minY, player.y));
+        if (player.x > ZONES.pirate.maxX && player.x < ZONES.monstre.minX) {
+          if (!isInPasserelle(player.y)) {
+            player.y = oldY; 
+            if (!isInPasserelle(player.y)) {
+              player.x = oldX; 
+            }
+          }
+        }
       }
-      player.y = Math.min(ARENA.height - 30, Math.max(30, player.y));
       
       player.dashCooldown = Date.now() + 10000;
       
