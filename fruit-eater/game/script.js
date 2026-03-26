@@ -368,27 +368,33 @@ ws.addEventListener("message", (event) => {
         const el = trapElements[trap.id];
         const now = Date.now();
         
+        // Ignorer les lasers (line)
+        if (trap.type === "line") {
+          el.style.display = "none";
+          return;
+        }
+
         // 2. Attribution de la bonne équipe (pour le sprite de base)
         if (trap.sprite === 'pirate') el.classList.add('pirate');
         else el.classList.add('monstre');
         
-        // 3. Positionnement et taille (TRAP_RADIUS)
+        // 3. Positionnement et taille (TRAP_RADIUS, mais écrasé)
         el.style.width = trap.radius * 2 + "px";
-        el.style.height = trap.radius * 2 + "px";
+        el.style.height = trap.radius + "px"; // Hauteur divisée par 2 ("écrasé")
         el.style.left = trap.x - trap.radius + "px";
-        el.style.top  = trap.y - trap.radius + "px";
+        el.style.top  = trap.y - (trap.radius / 2) + "px"; // Centrage vertical ajusté
         
         // ===========================================================
-        // 4. GESTION DES CLIGNOTEMENTS (Warning 3s)
+        // 4. GESTION DES CLIGNOTEMENTS (Warning 1.5s)
         // ===========================================================
         el.classList.remove("warning"); // On nettoie par défaut
         
-        // Avertissement avant apparition (pendant les 3 premières secondes)
+        // Avertissement avant apparition (pendant les 1.5 premières secondes)
         if (now < trap.activeAt) {
           el.classList.add("warning");
         } 
-        // Avertissement avant disparition (pendant les 3 dernières secondes)
-        else if (now >= (trap.expireAt - 3000)) {
+        // Avertissement avant disparition (pendant les 1.5 dernières secondes)
+        else if (now >= (trap.expireAt - 1500)) {
           el.classList.add("warning");
         }
         

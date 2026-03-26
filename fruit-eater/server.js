@@ -234,13 +234,18 @@ function respawnRedTrapsForSide(side) {
       radius: TRAP_RADIUS,
       inactiveDuration: INACTIVE_DURATION,
       
-      // GESTION DU TEMPS (Clignotements de 3s)
-      // Il devient mortel 3s après sa création (pendant l'avertissement)
-      activeAt: now + 3000, 
-      // Il disparaît 10s après être devenu actif (durée totale 13s)
-      expireAt: now + 13000
+      // GESTION DU TEMPS (Clignotements)
+      // Il devient mortel 1.5s après sa création (pendant l'avertissement)
+      activeAt: now + 1500, 
+      // Il disparaît 10s après être devenu actif (durée totale 11.5s)
+      expireAt: now + 11500
     };
   }
+}
+
+function spawnTraps() {
+  respawnRedTrapsForSide("pirate");
+  respawnRedTrapsForSide("monstre");
 }
 
 function isInPasserelle(y) {
@@ -253,7 +258,7 @@ function checkTrap(player) {
       if (t.type !== "rouge") return false;
       const dx = player.x - t.x;
       const dy = player.y - t.y;
-      return Math.sqrt(dx * dx + dy * dy) < t.radius;
+      return Math.sqrt(dx * dx + (dy * 2) * (dy * 2)) < t.radius;
     });
     if (inRedTrap) return;
     delete player.respawnProtected; 
@@ -271,7 +276,8 @@ function checkTrap(player) {
     } else {
       const dx = player.x - trap.x;
       const dy = player.y - trap.y;
-      hit = Math.sqrt(dx * dx + dy * dy) < trap.radius;
+      // Collision elliptique pour correspondre à l'affichage "écrasé"
+      hit = Math.sqrt(dx * dx + (dy * 2) * (dy * 2)) < trap.radius;
     }
 
     if (hit) {
@@ -286,7 +292,7 @@ function checkTrap(player) {
         safeY = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
         onTrap = Object.values(traps).some(t => {
           if (t.type === "line") return Math.abs(safeY - t.y) < t.tolerance;
-          return Math.sqrt((safeX - t.x) ** 2 + (safeY - t.y) ** 2) < t.radius;
+          return Math.sqrt((safeX - t.x) ** 2 + ((safeY - t.y) * 2) ** 2) < t.radius;
         });
       } while (onTrap);
       player.x = safeX;
@@ -316,7 +322,7 @@ function checkPush(player) {
           ? Math.floor(Math.random() * (ARENA.width / 2 - 60)) + 30
           : Math.floor(Math.random() * (ARENA.width / 2 - 60)) + ARENA.width / 2 + 30;
         sy = Math.floor(Math.random() * (ARENA.height - 100)) + 50;
-        safe = !Object.values(traps).some(t => Math.sqrt((sx - t.x) ** 2 + (sy - t.y) ** 2) < t.radius);
+        safe = !Object.values(traps).some(t => Math.sqrt((sx - t.x) ** 2 + ((sy - t.y) * 2) ** 2) < t.radius);
       } while (!safe);
       other.x = sx;
       other.y = sy;

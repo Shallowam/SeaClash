@@ -589,7 +589,7 @@ body {
   pointer-events: none;
   
   /* L'image de sable mouvant utilise la taille définie par le serveur (trap.radius) */
-  background-size: auto;
+  background-size: 100% 100%; /* S'adapte à la div "écrasée" */
   background-position: center;
 }
 
@@ -603,15 +603,15 @@ body {
   background-image: url('assets/SM1-monstre.png'); /* Par défaut, SM1 */
 }
 
-/* Classe d'avertissement (clignotement 3s avant apparition et disparition) */
+/* Classe d'avertissement (clignotement avant apparition et disparition) */
 .trap.warning {
   /* On applique un filtre pour montrer que la zone n'est pas encore "active" */
   filter: grayscale(100%) brightness(1.5);
-  /* L'animation fait clignoter rapidement */
-  animation: trap-warning-blink 0.2s infinite alternate;
+  /* L'animation fait clignoter plus doucement */
+  animation: trap-warning-blink 0.4s infinite alternate ease-in-out;
 }
 
 @keyframes trap-warning-blink {
   from { opacity: 1; }
-  to   { opacity: 0; }
+  to   { opacity: 0.3; }
 }
