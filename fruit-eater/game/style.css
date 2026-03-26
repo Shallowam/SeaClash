@@ -631,7 +631,7 @@ body {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  transition: left 10s linear;
+  transition: left 5s linear;
   z-index: 4;
 }
 
@@ -646,4 +646,14 @@ body {
 @keyframes trap-warning-blink {
   from { opacity: 1; }
   to   { opacity: 0.3; }
+}
+
+/* Animation de clignotement pour le joueur touché */
+.blinking {
+  animation: player-blink 0.1s infinite alternate;
+}
+
+@keyframes player-blink {
+  from { opacity: 1; }
+  to   { opacity: 0.2; }
 }

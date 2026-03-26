@@ -48,7 +48,7 @@ const ABORDAGE_WINDOWS = [
   { start: 5 * 60 * 1000, end: 5 * 60 * 1000 + 45 * 1000 },
   { start: 8 * 60 * 1000, end: 8 * 60 * 1000 + 45 * 1000 },
 ];
-const PUSH_DISTANCE            = 40;          
+const PUSH_DISTANCE            = 80;          
 const APPLE_TELEPORT_DURATION  = 15 * 1000;   
 const LINE_TRAP_DURATION       = 3 * 1000;    
 const LINE_TRAP_TOLERANCE      = 40;          
@@ -178,9 +178,9 @@ function checkPickup(player) {
           startX: startX,
           endX: endX,
           targetTeam: opponentTeam,
-          duration: 10000,
+          duration: 5000,
           startTime: Date.now(),
-          deactivateAt: Date.now() + 10000,
+          deactivateAt: Date.now() + 5000,
           inactiveDuration: 5 * 1000
         };
         scores[player.team]++;
@@ -355,24 +355,52 @@ function checkPush(player) {
   const inOpponentZone = (player.team === "pirate" && player.x > ARENA.width / 2) ||
                          (player.team === "monstre"  && player.x < ARENA.width / 2);
   if (!inOpponentZone) return;
+
   for (const other of Object.values(players)) {
     if (other.id === player.id || other.team === player.team) continue;
     if (other.inactiveUntil && Date.now() < other.inactiveUntil) continue;
+    if (other.invincibleUntil && Date.now() < other.invincibleUntil) continue;
+
     const dx = player.x - other.x;
     const dy = player.y - other.y;
     if (Math.sqrt(dx * dx + dy * dy) < PUSH_DISTANCE) {
-      other.inactiveUntil = Date.now() + INACTIVE_DURATION;
-      deaths[other.team]++;
-      let sx, sy, safe;
-      do {
+      if (!other.hitCount || other.hitCount === 0) {
+        // Premier coup : devient invincible/clignote pendant 0.5s
+        other.hitCount = 1;
+        other.invincibleUntil = Date.now() + 500;
+        console.log(`💥 ${other.pseudo} touché une fois !`);
+      } else {
+        // Deuxième coup : KO
+        other.hitCount = 0;
+        other.invincibleUntil = 0;
+        other.inactiveUntil = Date.now() + INACTIVE_DURATION;
+        deaths[other.team]++;
+        console.log(`💀 ${other.pseudo} mis KO par ${player.pseudo} !`);
+
+        // Respawn local
         const teamZone = ZONES[other.team];
-        sx = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
-        sy = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
-        safe = !Object.values(traps).some(t => Math.sqrt((sx - t.x) ** 2 + ((sy - t.y) * 2) ** 2) < t.radius);
-      } while (!safe);
-      other.x = sx;
-      other.y = sy;
-      console.log(`${player.pseudo} a pousse ${other.pseudo} !`);
+        const SCATTER = 120;
+        let sx, sy, safe, attempts = 0;
+        do {
+          sx = other.x + (Math.random() * SCATTER * 2 - SCATTER);
+          sy = other.y + (Math.random() * SCATTER * 2 - SCATTER);
+          sx = Math.max(teamZone.minX, Math.min(teamZone.maxX, sx));
+          sy = Math.max(teamZone.minY, Math.min(teamZone.maxY, sy));
+          safe = !Object.values(traps).some(t => {
+            if (t.type === "line") return Math.abs(sy - t.y) < t.tolerance;
+            if (t.type === "shark") return Math.abs(sy - t.y) < 75;
+            return Math.sqrt((sx - t.x) ** 2 + ((sy - t.y) * 2) ** 2) < t.radius;
+          });
+          attempts++;
+          if (attempts > 20) {
+            sx = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
+            sy = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
+            break;
+          }
+        } while (!safe);
+        other.x = sx;
+        other.y = sy;
+      }
       break;
     }
   }
@@ -397,6 +425,8 @@ function startGame() {
     const teamZone = ZONES[player.team];
     player.x = Math.floor(Math.random() * (teamZone.maxX - teamZone.minX)) + teamZone.minX;
     player.y = Math.floor(Math.random() * (teamZone.maxY - teamZone.minY)) + teamZone.minY;
+    player.hitCount = 0;
+    player.invincibleUntil = 0;
     delete player.inactiveUntil;
   }
 
@@ -562,6 +592,8 @@ wss.on("connection", (ws) => {
         id, pseudo: data.pseudo || "Anonyme", team: assignedTeam,
         x: Math.floor(Math.random() * (z.maxX - z.minX)) + z.minX,
         y: Math.floor(Math.random() * (z.maxY - z.minY)) + z.minY,
+        hitCount: 0,
+        invincibleUntil: 0
       };
 
       console.log(`${players[id].pseudo} (${players[id].team}) a rejoint la partie`);

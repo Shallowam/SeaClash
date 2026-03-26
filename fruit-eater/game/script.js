@@ -272,6 +272,13 @@ ws.addEventListener("message", (event) => {
           }
       }
 
+      // Gestion du clignotement (invincibilité PvP)
+      if (p.invincibleUntil && p.invincibleUntil > Date.now()) {
+        el.classList.add("blinking");
+      } else {
+        el.classList.remove("blinking");
+      }
+
       // On applique enfin les coordonnées
       el.dataset.lastX = p.x;
       el.dataset.lastY = p.y;
