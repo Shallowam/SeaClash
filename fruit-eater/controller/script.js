@@ -47,7 +47,6 @@ const ctrlTimer = document.getElementById("ctrl-timer");
 // K.O. et Abordage
 const screenInactive = document.getElementById("screen-inactive");
 const inactiveCountdown = document.getElementById("inactive-countdown");
-const abordageNotif = document.getElementById("abordage-notif");
 
 // Bouton Dash (Petit Crâne)
 const btnDashSkull = document.getElementById("btn-dash");
@@ -180,7 +179,6 @@ ws.addEventListener("message", (event) => {
       ctrlOpponentDeathsScore.textContent = myTeamDeaths;
     }
     ctrlTimer.textContent = formatTime(data.timeLeft || 0);
-    abordageNotif.classList.toggle("hidden", !data.abordageActive);
 
     if (myId && data.players[myId]) {
       const me = data.players[myId];
@@ -311,14 +309,14 @@ if (btnTaperPoing) {
     btnTaperPoing.style.transform = "scale(0.85)";
     setTimeout(() => { btnTaperPoing.style.transform = "scale(1)"; }, 100);
 
-    // On bloque le bouton pendant le cooldown (1.5s)
-    btnTaperPoing.disabled = true;
-    btnTaperPoing.style.filter = "grayscale(100%) brightness(50%)"; // On le grise
-
-    setTimeout(() => {
-      btnTaperPoing.disabled = false;
-      btnTaperPoing.style.filter = "none"; // On lui rend ses couleurs
-    }, 1500);
+    // Si le joystick est bloqué (interval mort), on le redémarre
+    if (!joystickInterval && (currentDirX !== 0 || currentDirY !== 0)) {
+      joystickInterval = setInterval(() => {
+        if (currentDirX !== 0 || currentDirY !== 0) {
+          send("move", { x: currentDirX, y: currentDirY });
+        }
+      }, 80);
+    }
   }
 
   btnTaperPoing.addEventListener("touchstart", fireTaper, { passive: false });

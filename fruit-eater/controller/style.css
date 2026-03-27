@@ -2,15 +2,20 @@
    PIRATE CONTROLLER — style.css (Sea Clash Edition - Correction Portrait)
    ============================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Pirata+One&display=swap');
+@font-face {
+  font-family: 'Riking';
+  src: url('fonts/Riking.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 
 :root {
   --color-rouge: #ff3c3c;
   --color-rouge-deaths: #8b0000;
   --color-parchemin: #f5e4c3;
   /* Fond beige mock-up image_13.png */
-  --font-pirate: 'Pirata One', cursive;
-  --font-pirate-num: 'Cinzel Decorative', cursive;
+  --font-pirate: 'Riking', sans-serif;
+  --font-pirate-num: 'Riking', sans-serif;
 }
 
 * {
@@ -71,7 +76,7 @@ body {
 
 /* Titre "NOM DU JOUEUR" */
 .sc-label {
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
   color: #000;
   font-size: 1.8rem;
   font-weight: 900;
@@ -141,7 +146,7 @@ body {
   border-radius: 8px;
   padding: 0 10px;
   font-size: 1.4rem;
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
   color: #333;
   text-align: center;
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
@@ -258,13 +263,13 @@ body {
   font-weight: 900;
   color: #000;
   margin-top: -5px;
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
 }
 
 #player-team {
   font-size: 1.2rem;
   font-weight: 900;
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
 }
 
 #player-team.monstre {
@@ -461,7 +466,7 @@ body {
   display: inline-block;
   padding: 8px 30px;
   border-radius: 30px;
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
   font-size: 1.4rem;
   font-weight: 900;
   letter-spacing: 3px;
@@ -484,7 +489,7 @@ body {
 }
 
 .select-title {
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
   color: #f5e4c3;
   font-size: 1.3rem;
   font-weight: 900;
@@ -579,7 +584,7 @@ body {
 }
 
 .skin-card-name {
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
   font-size: 0.7rem;
   font-weight: 700;
   color: rgba(245, 228, 195, 0.8);
@@ -595,7 +600,7 @@ body {
 }
 
 .select-hint {
-  font-family: Arial, sans-serif;
+  font-family: 'Riking', sans-serif;
   font-size: 0.85rem;
   color: rgba(245, 228, 195, 0.5);
   margin: 0;

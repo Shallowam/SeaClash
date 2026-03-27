@@ -4,8 +4,87 @@
 
 const ws = new WebSocket(`ws://${location.host}`);
 // =============================================================================
-// PRÉCHARGEMENT DES IMAGES (Anti-Lag)
+// PRÉCHARGEMENT DES IMAGES ET SONS (Anti-Lag)
 // =============================================================================
+const audioMortPirate = new Audio("sons-jeu/mort-pirates.mp3");
+const audioMortMonstre = new Audio("sons-jeu/mort-monstres.mp3");
+
+const audioBgmGenerale = new Audio("sons-jeu/musique-generale.mp3");
+audioBgmGenerale.loop = true;
+const audioBgmAbordage = new Audio("sons-jeu/musique-abordage.mp3");
+audioBgmAbordage.loop = true;
+
+let audioUnlocked = false;
+
+// Créer un overlay visuel pour obliger le clic
+const audioOverlay = document.createElement("div");
+audioOverlay.innerHTML = "🔊 CLIQUEZ POUR ACTIVER LE SON";
+audioOverlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);color:white;display:flex;align-items:center;justify-content:center;font-size:3rem;z-index:9999;cursor:pointer;font-family:sans-serif;text-align:center;";
+document.body.appendChild(audioOverlay);
+
+// Activer le son dès le clic sur l'overlay
+document.addEventListener("click", () => {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  audioOverlay.style.display = "none";
+
+  // Lance la musique en cours (ou la générale par défaut)
+  const bgmToPlay = currentBgm || audioBgmGenerale;
+  if (!currentBgm) currentBgm = audioBgmGenerale;
+  bgmToPlay.volume = 0.5;
+  bgmToPlay.play().catch(e => console.warn("Audio:", e));
+}, { once: true });
+
+let currentBgm = null;
+let bgmFadeInterval = null;
+
+function playBgm(newBgm) {
+  if (currentBgm === newBgm) return;
+  
+  if (!audioUnlocked) {
+    currentBgm = newBgm;
+    return;
+  }
+  
+  if (!currentBgm) {
+    newBgm.volume = 0.5;
+    newBgm.play().catch(e => console.warn("Audio bloqué:", e));
+    currentBgm = newBgm;
+    return;
+  }
+  
+  if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+  
+  const oldBgm = currentBgm;
+  currentBgm = newBgm;
+  currentBgm.volume = 0;
+  currentBgm.play().catch(e => console.warn("Audio bloqué:", e));
+  
+  let steps = 20;
+  let currentStep = 0;
+  bgmFadeInterval = setInterval(() => {
+    currentStep++;
+    oldBgm.volume = Math.max(0, (1 - currentStep / steps) * 0.5);
+    currentBgm.volume = Math.min(0.5, (currentStep / steps) * 0.5);
+    if (currentStep >= steps) {
+      clearInterval(bgmFadeInterval);
+      oldBgm.pause();
+    }
+  }, 50);
+}
+
+function stopBgm() {
+  if (currentBgm) {
+    currentBgm.pause();
+    currentBgm.currentTime = 0;
+    currentBgm = null;
+  }
+  if (bgmFadeInterval) {
+    clearInterval(bgmFadeInterval);
+    bgmFadeInterval = null;
+  }
+}
+
 const imagesToPreload = [];
 const pirateSkins = ["Perso1", "Perso2", "Perso3", "Perso4", "Perso5", "Perso6", "Perso7", "Perso8", "Perso9", "Perso10"];
 const monstreSkins = ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10"];
@@ -111,6 +190,7 @@ ws.addEventListener("message", (event) => {
 }); // fin du premier handler (state seulement)
 
 let previousAbordageActive = false;
+let previousPhase = "waiting";
 let abordageBannerTimeout = null;
 
 // =============================================================================
@@ -163,6 +243,13 @@ function renderState() {
 
   timerEl.textContent = formatTime(timeLeft);
   timerEl.classList.toggle("urgent", timeLeft < 30000 && timeLeft > 0);
+
+  if (abordageActive) {
+    playBgm(audioBgmAbordage);
+  } else {
+    playBgm(audioBgmGenerale);
+  }
+  previousPhase = phase;
 
   if (abordageActive && !previousAbordageActive) {
     abordageBanner.classList.remove("hidden");
@@ -253,6 +340,15 @@ function renderState() {
 
     if (isKO) {
       if (el.dataset.state !== "ko") {
+        // Jouer le son de mort selon l'équipe
+        if (p.team === "pirate") {
+          let sound = audioMortPirate.cloneNode();
+          sound.play().catch(e => console.warn("Audio bloqué:", e));
+        } else {
+          let sound = audioMortMonstre.cloneNode();
+          sound.play().catch(e => console.warn("Audio bloqué:", e));
+        }
+
         clearInterval(el.attackInterval);
         sprite.src = `assets/${teamFolder}/${persoName}-KO.png`;
         sprite.style.width = "66px";

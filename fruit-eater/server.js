@@ -97,7 +97,8 @@ const PICKUP_DISTANCE = 80;
 
 const TRAP_COUNT = 1; // 1 sable mouvant par zone
 const TRAP_RADIUS = 50;
-const INACTIVE_DURATION = 2 * 1000; // 2 secondes
+const INACTIVE_DURATION = 3 * 1000;    // 3s KO (ne peut pas bouger)
+const INVINCIBLE_DURATION = 2 * 1000;  // 2s invincible après le KO (peut bouger)
 const RED_TRAP_ACTIVE_DURATION = 15 * 1000; // 15 secondes visibles
 const RED_TRAP_HIDDEN_DURATION = 5 * 1000;  // 5 secondes cachées (plus aucune zone)
 
@@ -310,7 +311,7 @@ function checkPickup(player) {
                 const dy = p.y - targetY;
                 if (Math.sqrt(dx * dx + dy * dy) < EXPLOSION_RADIUS) {
                   p.inactiveUntil = Date.now() + INACTIVE_DURATION;
-                  p.invincibleUntil = Date.now() + INACTIVE_DURATION + 2000;
+                  p.invincibleUntil = Date.now() + INACTIVE_DURATION + INVINCIBLE_DURATION;
                   deaths[p.team]++;
                   console.log(`💥 ${p.pseudo} touché par la bombe !`);
                 }
@@ -349,7 +350,7 @@ function respawnRedTrapsForSide(side) {
       x: x,
       y: y,
       radius: TRAP_RADIUS,
-      inactiveDuration: INACTIVE_DURATION,
+      inactiveDuration: INACTIVE_DURATION, // conservé pour compatibilité mais ignoré dans checkTrap
 
       // GESTION DU TEMPS (Clignotements)
       // Il devient mortel 1.5s après sa création (pendant l'avertissement)
@@ -372,7 +373,7 @@ function isInPasserelle(y) {
 function checkTrap(player) {
   if (player.respawnProtected) {
     const inRedTrap = Object.values(traps).some(t => {
-      if (t.type !== "rouge") return false;
+      if (t.type !== "sable") return false;
       const dx = player.x - t.x;
       const dy = player.y - t.y;
       return Math.sqrt(dx * dx + (dy * 2) * (dy * 2)) < t.radius;
@@ -412,8 +413,8 @@ function checkTrap(player) {
       // Si le joueur est déjà inactif, on ne réinitialise pas son timer
       if (player.inactiveUntil && Date.now() < player.inactiveUntil) break;
 
-      player.inactiveUntil = Date.now() + trap.inactiveDuration;
-      player.invincibleUntil = Date.now() + trap.inactiveDuration + 2000;
+      player.inactiveUntil = Date.now() + INACTIVE_DURATION;     // 3s KO
+      player.invincibleUntil = Date.now() + INACTIVE_DURATION + INVINCIBLE_DURATION; // +2s invincible
       player.respawnProtected = true;
       deaths[player.team]++;
 
@@ -529,6 +530,7 @@ function startGame() {
 
           for (const [id, trap] of Object.entries(traps)) {
             if ((trap.type === "line" || trap.type === "shark") && Date.now() >= trap.deactivateAt) delete traps[id];
+            if (trap.type === "sable" && Date.now() >= trap.expireAt) delete traps[id];
           }
           // =======================================================
           // NOUVEAU : NETTOYAGE DES OBJETS PÉRIMÉS (10 secondes)
@@ -550,21 +552,21 @@ function startGame() {
           if (Date.now() >= nextRedTrapChange) {
             if (redTrapsActive) {
               // 1. Il est temps de les cacher !
-              // On supprime uniquement les pièges "rouge" (pour ne pas effacer les lasers)
+              // On supprime uniquement les pièges "sable"
               for (const id in traps) {
-                if (traps[id].type === "rouge") {
+                if (traps[id].type === "sable") {
                   delete traps[id];
                 }
               }
               redTrapsActive = false;
               nextRedTrapChange = Date.now() + RED_TRAP_HIDDEN_DURATION;
-              console.log("Les zones rouges disparaissent !");
+              console.log("Les zones sables disparaissent !");
             } else {
               // 2. Il est temps de les faire réapparaître à un NOUVEL endroit !
               spawnTraps();
               redTrapsActive = true;
               nextRedTrapChange = Date.now() + RED_TRAP_ACTIVE_DURATION;
-              console.log("Nouvelles zones rouges !");
+              console.log("Nouvelles zones sables !");
             }
           }
           // =======================================================
@@ -811,10 +813,10 @@ wss.on("connection", (ws) => {
       if (player.inactiveUntil && Date.now() < player.inactiveUntil) return;
 
       if (player.taperCooldown && Date.now() < player.taperCooldown) return;
-      player.taperCooldown = Date.now() + 1500;
+      player.taperCooldown = Date.now() + 250; // Spammable (250ms au lieu de 1500)
 
-      // LIGNE AJOUTÉE ICI : Indique le temps de l'animation d'attaque (300ms)
-      player.attackEndsAt = Date.now() + 500;
+      // Indique le temps de l'animation d'attaque rapide (250ms)
+      player.attackEndsAt = Date.now() + 250;
 
       // 1. Calculer où le sabre frappe
       const dirX = player.lastDirX || 1;
@@ -836,7 +838,7 @@ wss.on("connection", (ws) => {
           const dy = other.y - swordY;
           if (Math.sqrt(dx * dx + dy * dy) < SWORD_RADIUS) {
             other.inactiveUntil = Date.now() + INACTIVE_DURATION;
-            other.invincibleUntil = Date.now() + INACTIVE_DURATION + 2000;
+            other.invincibleUntil = Date.now() + INACTIVE_DURATION + INVINCIBLE_DURATION; // +2s invincible
             other.respawnProtected = true;
             deaths[other.team]++;
             const respawnPos = getRandomPositionInZone(other.team);
